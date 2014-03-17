@@ -1,0 +1,25 @@
+{
+  "name": "c-BE",
+  "version": "0.0.0",
+  "description": "bee yah",
+  "main": "app.js",
+  "dependencies": {
+    "hapi": "~2.6.0"
+  },
+  "devDependencies": {
+    "mocha": "~1.17.1"
+  },
+  "scripts": {
+    "test": "node test/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chrisgervang/c-BE.git"
+  },
+  "author": "Chris Gervang",
+  "license": "",
+  "bugs": {
+    "url": "https://github.com/chrisgervang/c-BE/issues"
+  },
+  "homepage": "https://github.com/chrisgervang/c-BE"
+}
