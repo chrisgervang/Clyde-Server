@@ -1,4 +1,4 @@
-//make tests in here. Its basically mongo.
+//make tests in here. Its basically mocha.
 
 
 server.inject('/', function (res) {
