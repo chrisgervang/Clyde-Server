@@ -1,0 +1,34 @@
+//A Shouter is an objects that get created for each device that need's to update the server with new status information.
+/*
+--construcion--
+Params: {type: , user: }
+Log: New connection: {uuid: , ip: , port: , type: }
+Store: info used to construct 
+Creates a loop to ask for device stats, and shouts whenever a significant piece of data manafests, changes. 
+--.destroy()
+Log: destroyed, {uuid}
+stops loop
+--.ask()
+Log: {online: , data: }
+poll the device for new info
+--.data {}
+store temporary state information
+
+//
+
+Sculley: event logger, - keep's a record of everything happening
+Posey: catcher, - Listens for significant events given a user's configuration
+Seaver: pitcher, - Shouter
+Mays: batter - Action, they shot out a command to a device
+Umpire: validation
+Assistant: Sets up the play in baseball. It makes the little mircro servers for each device and passes that along to the Shouter.
+
+Log types:
+
+Errors
+Connection
+
+
+A Mob contains a group of shouters - acts as the collection for Shouters
+
+OutOfThePark - command leaveing out server into the web. We know it's a device error if it's out of the park and the device isn't working.

@@ -1,0 +1,28 @@
+Insteon Devices
+
+Device List:
+Hub
+LampLinc Dimmer
+SwitchLinc Dimmer
+
+
+--Hub
+INSTEON ID: 2A.AB.0A
+MAC Addr
+IP
+Port
+
+
+--SwitchLinc Dimmer
+INSTEON ID: 29.F2.81
+Device Details: x01x20x41
+
+To connect a device:
+Best success comes from connecting by ID
+1. Press&Hold Set button
+2. Enter ID in app
+3. hit next
+4. Hit dimmer switch randomly
+5. Press&Hold Set Button
+6. ???
+7. Profits

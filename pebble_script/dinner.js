@@ -1,8 +1,8 @@
-simply.title('Clyde@Home');
-simply.subtitle('dinner?');
+simply.title('Clyde');
+simply.subtitle('sleep?');
 simply.on('singleClick', function(e) {
   if (e.button === 'select') {
-    ajax({ url: 'http://localhost:8000/trigger/dinner' }, function(data){
+    ajax({ url: 'http://192.168.0.110:8000/demo/sleep' }, function(data){
 	  simply.subtitle(data);
 	});
   } 
