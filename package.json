@@ -4,19 +4,11 @@
   "description": "bee yah",
   "main": "lib/index.js",
   "dependencies": {
-    "hapi": "~2.6.0",
-    "nano": "~5.7.1",
-    "node.extend": "~1.0.10", 
-    "node-hue-api": "~0.2.2",
-    "sparknode": "~0.3.2",
-    "wemo": "~0.1.0",
-    "underscore": "~1.6.0"
+    "home-controller": "^0.3.2"
   },
-  "devDependencies": {
-    "mocha": "~1.17.1"
-  },
+  "devDependencies": {},
   "scripts": {
-    "test": "node test/"
+    "start": "node app.js"
   },
   "repository": {
     "type": "git",
