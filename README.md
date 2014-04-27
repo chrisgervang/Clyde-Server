@@ -5,3 +5,9 @@ This will NOT be pulled back into the main backend. It's a temporary solution to
 
 As such, this is very stripped down. It only contains Shouter's and a couple RESTful commands to command a house.
 
+Devices
+=======
+
+- Philips Hue
+- Insteon
+- WeMo
