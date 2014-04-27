@@ -5,7 +5,7 @@ This is the 2nd version of the deployable Clyde BackEnd. It will have support fo
 Contains:
 - Catcher
 - Umpire
-- 
+
 
 Devices
 =======
