@@ -3,33 +3,14 @@ var clydedevices = new Firebase('https://clydedev.firebaseio.com/devices/');
 var WeMo = new require('wemo');
 var deviceDesignDB = new Firebase('https://clydedev.firebaseio.com/deviceDesigns/');
 var _ = require('lodash');
-var Action = require('../Action');
+var Action = require('./Action');
+var db = require('./db');
 
+var devices = new db("devices");
 
-var loadDB = function(root, cb){
-	var deviceDB = new Firebase('https://clydedev.firebaseio.com/' + root + "/");
-	
-	var devices = [];
-	deviceDB.once('value', function(snapshot){
-		//console.log(snapshot.val());
-		var deviceCount = _.size(snapshot.val());
-		var count = 0;
-		deviceDB.on('child_added', function(snapshot){
-			devices.push(snapshot.val());
-
-			count++;
-			console.log(deviceCount, count);
-			if (count >= deviceCount) {
-				cb(devices);
-			}
-		});
-		
-	});
-}
-
-loadDB("devices", function(devices){
+devices.load(function(devices){
 	var initDevices = new Mob();
-	//console.log(devices);
+	// console.log(devices);
 	devices.forEach(function(device, index, array){
 		initDevices.add(new Shouter({id: device.id}));
 	})
@@ -233,7 +214,7 @@ var Shouter = function(config) {
 
 	this.destroy = function() {
 		clearInterval(data.process);
-		//delete this; ... somehow ... pop form Collection Mob?
+		//delete this; ... somehow ... pop from Collection Mob?
 	}
 	this.getID = function() {
 

@@ -1,0 +1,9 @@
+On why we chose Consumers over API as a Service:
+
+Our vision is to facilitate great experiences for real people. While we know we could deliver a great product to developers, we are not as confidant that those developers would be able to devliver great experiences to the end customer yet. 
+
+The space is not yet saturated with users to motivate developers to build business off of a home automation platform. [Similar to the release of the iPhone, we see the value of developer apps once we build a user base]
+
+Furthermore, while there is a decent amount of home automation hardware on the market today, we feel there isn’t enough yet to enable our developers to create a diverse selection of apps. 
+
+Lastly, we both have strong skills and experience around creating products for consumers, it would be irresponsible to the company for us to not utilize them.

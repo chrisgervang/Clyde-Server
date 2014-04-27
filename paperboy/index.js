@@ -4,10 +4,11 @@ var http    = require('http'),
 var command = require('./handlers/command'),
 	devices = require('./handlers/devices');
 
-var server = new Hapi.Server('10.0.1.135', 8000, { cors: true });
+	require('./lib/helpers');
+
+var server = new Hapi.Server('10.0.1.10', 8000, { cors: true });
 
 	server.route([
-		{ method: 'GET', path: '/', handler: index },
 		{ method: 'POST', path: '/command/{type}', handler: command},
 		{ method: 'GET', path: '/devices', handler: devices}
 	]);

@@ -1,0 +1,44 @@
+Hit the ground running when taking control of your internet connected hardware!
+
+Let this be an all inclusive record of the raw UPnP/SOAP stuff you'll need to interact with internet connected devices you'll find in your home.
+
+Belkin WeMo
+
+		urn:Belkin:service:basicevent:1
+
+Data:
+
+	<?xml version="1.0" encoding="utf-8"?>
+	<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+		<s:Body>
+			[param]
+		</s:Body>
+	</s:Envelope>
+
+HTTP request:
+
+	host   : [ip],
+	port   : [port],
+	path   : '/upnp/control/basicevent1',
+	method : 'POST',
+	headers: {
+		'SOAPACTION'     : [see below]
+		'Content-Length' : Data.length,
+		'Content-Type'   : 'text/xml; charset="utf-8"',
+		'User-Agent'     : 'CyberGarage-HTTP/1.0'
+	}
+
+SOAP ACTIONS and XML SOAP body:
+	
+	- body - Setting the light switch or power outlet
+	<u:SetBinaryState xmlns:u="urn:Belkin:service:basicevent:1">
+		<BinaryState>[0 or 1]</BinaryState>
+	</u:SetBinaryState>
+
+	'SOAPACTION'     : "urn:Belkin:service:basicevent:1#SetBinaryState"
+
+	- body - Getting the state of teh motion, lightswitch, power outlet
+	<u:GetBinaryState xmlns:u="urn:Belkin:service:basicevent:1">
+	</u:GetBinaryState>
+
+	'SOAPACTION'     : "urn:Belkin:service:basicevent:1#GetBinaryState"
