@@ -6,7 +6,22 @@ var command = require('./handlers/command'),
 
 	require('./lib/helpers');
 
-var server = new Hapi.Server('10.0.1.10', 8000, { cors: true });
+var os=require('os');
+var ifaces=os.networkInterfaces();
+var ip = [];
+for (var dev in ifaces) {
+  var alias=0;
+  ifaces[dev].forEach(function(details){
+    if (details.family=='IPv4' && details.internal == false) {
+      //console.log(dev+(alias?':'+alias:''),details.address);
+      ip.push(details.address);
+      ++alias;
+    }
+  });
+}
+console.log(ip[0]);
+
+var server = new Hapi.Server(ip[0], 8000, { cors: true });
 
 	server.route([
 		{ method: 'POST', path: '/command/{type}', handler: command},
