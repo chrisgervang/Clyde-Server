@@ -109,7 +109,7 @@ var Shouter = function(config) {
 			  	console.log("SONOS",device);
 			  	if (details.serialNum === data.settings.serialNum && !data.settings.UDN) {
 			  		console.log("SONOS",device);
-			  		data.settings.host = device.ip;
+			  		data.settings.ip = device.host;
 			  		data.settings.port = device.port;
 			  		data.settings.online = true;
 			  		data.settings.UDN = details.UDN;
@@ -118,6 +118,7 @@ var Shouter = function(config) {
 			  		console.log(that,data);
 					//Sculley: New Connection
 					//Firebase: Post up the new device for the User
+					new Firebase("https://clydedev.firebaseio.com/devices/" + data.id).update({settings: data.settings})
 					that.init();
 			  	} else if (details.serialNum === data.settings.serialNum) {
 			  		that.init()
@@ -206,6 +207,7 @@ var Shouter = function(config) {
 						console.log("SONOS CHANGE: ONLINE.", result.online);
 						data.state.online = (result.online ? true : false);
 						//Firebase: Post up the device... maybe Catcher event!
+						new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({online: data.state.online})
 					}
 					//is this device playing
 					if (data.state.playing !== result.playing && !!result.playing) {
@@ -213,6 +215,7 @@ var Shouter = function(config) {
 						console.log("SONOS CHANGE: PLAYING.", result.playing);
 						data.state.playing = result.playing;
 						//Firebase: Post up the device... maybe Catcher event!
+						new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({playing: data.state.playing})
 					}
 					//the play queue
 					if (data.state.queue === "_temp" || _.difference(data.state.queue, result.queue).length !== 0) {
@@ -220,6 +223,7 @@ var Shouter = function(config) {
 						console.log("SONOS CHANGE: QUEUE.", result.queue);
 						data.state.queue = result.queue;
 						//Firebase: Post up the device... maybe Catcher event!
+						new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({queue: data.state.queue})
 					}
 					//current playing song
 					if (!data.state.song || data.state.song.artist !== result.song.artist || data.state.song.title !== result.song.title || data.state.song.album !== result.song.album) {
@@ -227,6 +231,7 @@ var Shouter = function(config) {
 						console.log("SONOS CHANGE: SONG.", result.song);
 						data.state.song = result.song;
 						//Firebase: Post up the device... maybe Catcher event!
+						new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({song: data.state.song})
 					}
 					//the current volume
 					if (data.state.volume !== result.volume) {
@@ -234,10 +239,15 @@ var Shouter = function(config) {
 						console.log("SONOS CHANGE: VOLUME.", result.volume);
 						data.state.volume = result.volume;
 						//Firebase: Post up the device... maybe Catcher event!
+						new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({volume: data.state.volume})
 					}
 					
 				});
 			}, data.settings.pollRate);
+			console.log(data.settings.process)
+
+			var processDB = new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/settings/");
+			processDB.update({pollRate: data.settings.pollRate});
 		} else if (data.designRef === "Pebble") {
 
 		}
