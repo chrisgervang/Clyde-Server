@@ -104,7 +104,6 @@ var Shouter = function(config) {
 		} else if (data.designRef === "sonosSpeaker") {
 			var client = sonos.search();
 			client.on('DeviceAvailable', function(device, model) {
-				console.log("SONOS",device);
 			  device.deviceDescription(function(err, details){
 			  	console.log("SONOS",device);
 			  	if (details.serialNum === data.settings.serialNum && !data.settings.UDN) {
@@ -115,7 +114,7 @@ var Shouter = function(config) {
 			  		data.settings.UDN = details.UDN;
 			  		data.settings.modelName = details.modelName;
 
-			  		console.log(that,data);
+			  		console.log("SHIP",that,data);
 					//Sculley: New Connection
 					//Firebase: Post up the new device for the User
 					new Firebase("https://clydedev.firebaseio.com/devices/" + data.id).update({settings: data.settings})
@@ -125,11 +124,23 @@ var Shouter = function(config) {
 			  	}
 			  });
 			});
-
-
-
 		} else if (data.designRef === "Pebble") {
 
+		} else if (data.designRef === "insteonLightSwitch" && data.settings.devID === "29F281") {
+			/*var Insteon = require('home-controller').Insteon;
+			var gw = new Insteon();
+			gw.connect(data.settings.hubIp, function(){
+				console.log("insteonLightSwitch COMMAND", data.settings.devID);
+
+				if (!!data.settings.devID && data.settings.devID === "29F281") {
+					console.log('Connected!');
+					gw.link('gw', [data.settings.devID], function(error, link) {
+					  // link data from gateway
+					    console.log(error, link);
+					    gw.close();
+					});
+				}
+			})*/
 		}
 
 	});

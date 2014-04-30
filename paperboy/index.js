@@ -24,7 +24,7 @@ console.log(ip[0]);
 var server = new Hapi.Server(ip[0], 8000, { cors: true });
 
 	server.route([
-		{ method: 'POST', path: '/command/{type}', handler: command},
+		{ method: 'POST', path: '/command', handler: command},
 		{ method: 'GET', path: '/devices', handler: devices}
 	]);
 
