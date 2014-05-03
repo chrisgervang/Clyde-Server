@@ -72,7 +72,7 @@ var command = function(request, reply) {
 		//console.log("HERES UR BATCH", group);
 		
 		if (group[0].designRef === 'insteonLightSwitch') {
-			var Insteon = require('home-controller').Insteon;
+			var Insteon = require('../../../home-controller').Insteon;
 			var gw = new Insteon();
 			gw.connect(group[0].settings.hubIp, function(){
 				var successCount = 0;
@@ -81,7 +81,7 @@ var command = function(request, reply) {
 						var device = group[i];
 						console.log("insteonLightSwitch COMMAND", group[i].settings.devID, data.data.level)
 						insteon(gw, group[i], data, function(result) {
-							// console.log("finished", result);
+							console.log("finished", result);
 							//update firebase with a shouter!
 							new helpers.Shouter({id: device.id, onDemand: true})
 							successCount++;
@@ -135,6 +135,16 @@ var command = function(request, reply) {
 							reply("SUCCESS").code(200);
 						}
 					});
+				} else if(data.method === 'queueSpotify') {
+					device.queueSpotify(data.data.uri, function(result, error){
+						console.log(result, error);
+						successCount++;
+						//update firebase with a shouter!
+						new helpers.Shouter({id: deviceDBref.id, onDemand: true})
+						if (successCount === group.length) {
+							reply("SUCCESS").code(200);
+						}
+					})
 				}
 			};
 		}
@@ -149,6 +159,22 @@ var command = function(request, reply) {
 		setTimeout(function(){
 			if (data.method === "turnOnFast") {
 				gw.turnOnFast(device.settings.devID, function(error, result) {
+					//console.log(error, result);
+	
+					console.timeEnd("light");
+					cb(result);
+
+				});
+			} else if (data.method === "turnOn") {
+				gw.turnOn(device.settings.devID, data.data.level, data.data.rampRate, function(error, result) {
+					//console.log(error, result);
+	
+					console.timeEnd("light");
+					cb(result);
+
+				});
+			} else if (data.method === "turnOff") {
+				gw.turnOff(device.settings.devID, data.data.rampRate, function(error, result) {
 					//console.log(error, result);
 	
 					console.timeEnd("light");
@@ -205,7 +231,7 @@ var command = function(request, reply) {
 				//HALF BROKEN... throws error, kills server, after a link is made.
 				gw.unlink('gw', [device.settings.devID], function(error, link) {
 				  // link data from gateway
-				    //console.log(error, link);
+				    console.log(error, link);
 				
 					console.timeEnd("light");
 					cb(link);
