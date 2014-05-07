@@ -74,7 +74,7 @@ var command = function(request, reply) {
 					if (!!group[i].settings.devID) {
 						console.log("insteonLightSwitch COMMAND", group[i].settings.devID, data.data.level)
 						insteon(gw, group[i], data, function(result) {
-							console.log("finished", result.command.id);
+							console.log("finished", result);
 							successCount++;
 							if (successCount === group.length) {
 								gw.close();
