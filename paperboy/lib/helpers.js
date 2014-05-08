@@ -535,14 +535,7 @@ var Mob = function() {
 
 }
 
-var Catcher = function() {
-	var chunkDB = new Firebase('https://clydedev.firebaseio.com/blocks/');
-	var chunks;
-
-}
-
 module.exports = {
-	Catcher: Catcher,
 	Mob: Mob,
 	Shouter: Shouter
 }
