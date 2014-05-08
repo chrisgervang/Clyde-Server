@@ -4,17 +4,19 @@
   "description": "bee yah",
   "main": "lib/index.js",
   "dependencies": {
+    "firebase": "1.0.11",
     "hapi": "~2.6.0",
-    "nano": "~5.7.1",
-    "node.extend": "~1.0.10", 
-    "node-hue-api": "~0.2.2",
-    "sparknode": "~0.3.2",
-    "wemo": "~0.1.0",
-    "underscore": "~1.6.0",
     "home-controller": "0.2.0",
     "lodash": "2.4.1",
+    "nano": "~5.7.1",
+    "node-hue-api": "~0.2.2",
+    "node.extend": "~1.0.10",
+    "request": "^2.34.0",
     "sonos": "0.4.0",
-    "firebase": "1.0.11"
+    "sparknode": "~0.3.2",
+    "timezone": "~0.0.30",
+    "underscore": "~1.6.0",
+    "wemo": "~0.1.0"
   },
   "devDependencies": {
     "mocha": "~1.17.1"
