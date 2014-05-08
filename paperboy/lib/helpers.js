@@ -25,12 +25,17 @@ devices.load(function(devices){
 
 
 
-
 //Shouter Rules
 	//At very minimum, a shouter needs a 'uuid' & 'userid' to be created and a 'type' to actually run. 
 	//If the 'type' search doesn't come back with anything after some time, then an error is thrown saying "Tried to create a Shouter for a [device], user: [userid]". 
 	//If 'uuid' || 'userid' doesn't exist, also throw an error "The user or device doesn't exist"
 var Shouter = function(config) {
+	/*
+	config: {
+		onDemand: true;
+	}
+	*/
+
 	var data = {
 		//type: String*
 		//user: String*
@@ -50,6 +55,11 @@ var Shouter = function(config) {
 			}
 		}*/
 	}
+	process.on('uncaughtException', function (err) {
+	  console.log('Caught exception: ' + err);
+	  console.log("ERROOOOORRRRR", err, data);
+	});
+
 
 	
 	data.id = config.id;
@@ -120,27 +130,46 @@ var Shouter = function(config) {
 					new Firebase("https://clydedev.firebaseio.com/devices/" + data.id).update({settings: data.settings})
 					that.init();
 			  	} else if (details.serialNum === data.settings.serialNum) {
-			  		that.init()
+			  		that.init();
 			  	}
 			  });
 			});
 		} else if (data.designRef === "Pebble") {
 
-		} else if (data.designRef === "insteonLightSwitch" && data.settings.devID === "29F281") {
-			/*var Insteon = require('home-controller').Insteon;
+		} else if (data.designRef === "insteonLightSwitch") {
+			var Insteon = require('home-controller').Insteon;
 			var gw = new Insteon();
+			//per LightSwitch: grab current "onLevel", "ramprate", "online"
+			//SO connect to it. online (true or false). grab onLevel. grab rampRate. close connection. update firebase. that.init()
 			gw.connect(data.settings.hubIp, function(){
-				console.log("insteonLightSwitch COMMAND", data.settings.devID);
+				console.log("insteonLightSwitch CONNECT", data.settings.devID);
+				data.settings.online = true;
+				var successCount = 0;
+				gw.onLevel(data.settings.devID, function(err, result){
+					data.settings.onLevel = result;
+					successCount++;
+					console.log("successCount", successCount);
+					if (successCount === 2) {
+						new Firebase("https://clydedev.firebaseio.com/devices/" + data.id).update({settings: data.settings})
+						gw.close();
+						that.init();
+					}
+				});
 
-				if (!!data.settings.devID && data.settings.devID === "29F281") {
-					console.log('Connected!');
-					gw.link('gw', [data.settings.devID], function(error, link) {
-					  // link data from gateway
-					    console.log(error, link);
-					    gw.close();
-					});
-				}
-			})*/
+				gw.rampRate(data.settings.devID, function(err, result){
+					data.settings.rampRate = result;
+					successCount++;
+					console.log("successCount", successCount);
+					if (successCount === 2) {
+						new Firebase("https://clydedev.firebaseio.com/devices/" + data.id).update({settings: data.settings})
+						gw.close();
+						that.init();
+					}
+				});
+				// if (!!data.settings.devID) {
+				// 	console.log('Connected!');
+				// }
+			})
 		}
 
 	});
@@ -151,7 +180,7 @@ var Shouter = function(config) {
 			data.state = {};
 		}
 		var that = this;
-		data.settings.pollRate = 1000;
+		
 
 		if (data.designRef === "WeMo LightSwitch") {
 			data.settings.process = setInterval(function(){
@@ -205,7 +234,63 @@ var Shouter = function(config) {
 
 		} else if (data.designRef === "Philips Hue") {
 
-		} else if (data.designRef === "sonosSpeaker") {
+		} if (data.designRef === "insteonLightSwitch") {
+			data.settings.pollRate = 2000;
+			console.log("INIT INSTEON LIGHT SWITCH");
+			data.settings.process = setInterval(function(){
+				that.ask(function(result){
+					//console.log("DATA STATE\n", data.state);
+					//online
+					if (data.state.online !== result.online) {
+						// Sculley: data change
+						console.log("INSTEON LIGHT SWITCH CHANGE: ONLINE.", result.online);
+						data.state.online = (result.online ? true : false);
+						//Firebase: Post up the device... maybe Catcher event!
+						new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({online: data.state.online})
+					}
+					//light on (when level < 3 it is off)
+					if (data.state.on !== result.on) {
+						// Sculley: data change
+						console.log("INSTEON LIGHT SWITCH CHANGE: on.", result.on);
+						data.state.on = (result.on ? true : false);
+						//Firebase: Post up the device... maybe Catcher event!
+						new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({on: data.state.on})
+					}
+					
+					//light level (keeps track of level)
+					if (data.state.level !== result.level) {
+						// Sculley: data change
+						console.log("INSTEON LIGHT SWITCH CHANGE: level.", result.level);
+						data.state.level = result.level;
+						//Firebase: Post up the device... maybe Catcher event!
+						new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({level: data.state.level})
+					}
+					//rampRate
+					if (data.state.rampRate !== result.rampRate) {
+						// Sculley: data change
+						console.log("INSTEON LIGHT SWITCH CHANGE: rampRate.", result.rampRate);
+						data.state.rampRate = result.rampRate;
+						//Firebase: Post up the device... maybe Catcher event!
+						new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/settings/").update({rampRate: data.state.rampRate})
+					}
+					//onLevel
+					if (data.state.onLevel !== result.onLevel) {
+						// Sculley: data change
+						console.log("INSTEON LIGHT SWITCH CHANGE: onLevel.", result.onLevel);
+						data.state.onLevel = result.onLevel;
+						//Firebase: Post up the device... maybe Catcher event!
+						new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/settings/").update({onLevel: data.state.onLevel})
+					}
+					//only run shouter once!!!
+
+					if (config.onDemand === true) {
+						console.log(config);
+						that.destroy();
+					}
+				});
+			}, data.settings.pollRate)
+		}else if (data.designRef === "sonosSpeaker") {
+			data.settings.pollRate = 1000;
 			console.log("INIT SONOS");
 			data.settings.process = setInterval(function(){
 
@@ -252,10 +337,15 @@ var Shouter = function(config) {
 						//Firebase: Post up the device... maybe Catcher event!
 						new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({volume: data.state.volume})
 					}
+					//only run shouter once!!!
 					
+					if (config.onDemand === true) {
+						console.log(config);
+						that.destroy();
+					}
 				});
 			}, data.settings.pollRate);
-			console.log(data.settings.process)
+			//console.log(data.settings.process)
 
 			var processDB = new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/settings/");
 			processDB.update({pollRate: data.settings.pollRate});
@@ -298,10 +388,83 @@ var Shouter = function(config) {
 					cb(result);
 				}
 			});
-		} else if (data.type === "SparkCore") {
+		} else if (data.designRef === "SparkCore") {
 
-		} else if (data.type === "Philips Hue") {
+		} else if (data.designRef === "Philips Hue") {
 
+		} else if (data.designRef === "insteonLightSwitch") {
+			/*
+			console.time("insteonLightSwitch" + data.settings.devID);
+			*/
+			var Insteon = require('home-controller').Insteon;
+			var gw = new Insteon();
+			var state = {};
+			//var successCount = 0;
+			try {
+				gw.connect(data.settings.hubIp, function(){
+					state.online = true;
+					//successCount++;
+					
+					/*
+					console.log("insteonLightSwitch ASK", data.settings.devID);
+					*/
+					
+					//sorry to confuse structure here a bit. var state represent the "state" in the json. BUT
+					//I break a rule here: I add state.settings for rampRate & onLevel, because they aren't an active state, but a extra setting.
+
+					//grab onLevel, level, rampRate.
+					//infer online, on.
+					// gw.onLevel(data.settings.devID, function(err, result){
+					// 	state.settings.onLevel = result;
+					// 	successCount++
+					// 	if (successCount === 4) {
+					// 		gw.close();
+					// 		console.timeEnd("insteonLightSwitch" + data.settings.devID);
+					// 		cb(state);
+					// 	}
+					// });
+					// gw.rampRate(data.settings.devID, function(err, result){
+					// 	state.settings.rampRate = result;
+					// 	successCount++
+					// 	if (successCount === 4) {
+					// 		gw.close();
+					// 		console.timeEnd("insteonLightSwitch" + data.settings.devID);
+					// 		cb(state);
+					// 	}
+					// });
+					gw.level(data.settings.devID, function(err, result){
+						state.level = result;
+						if (result <= 3) {
+							state.on = false;
+						} else {
+							state.on = true;
+						}
+
+						if (!!err) {
+							console.log("ERROOOOORRRRR!!", err);
+						};
+						
+						//successCount++
+						//if (successCount === 4) {
+							gw.close();
+							
+							/*
+							console.timeEnd("insteonLightSwitch" + data.settings.devID);
+							*/
+
+							cb(state);
+						//}
+
+						/*if (result === 0 && truelyOff >= 2) {
+
+						} else {
+
+						}*/
+					});
+				})
+			} catch (e) {
+				
+			}
 		} else if (data.designRef === "sonosSpeaker") {
 			var device = new sonos.Sonos(data.settings.ip, data.settings.port);
 			//console.log("SONOS ASK\n", data, device);
@@ -376,4 +539,10 @@ var Catcher = function() {
 	var chunkDB = new Firebase('https://clydedev.firebaseio.com/blocks/');
 	var chunks;
 
+}
+
+module.exports = {
+	Catcher: Catcher,
+	Mob: Mob,
+	Shouter: Shouter
 }

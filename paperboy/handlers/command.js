@@ -15,11 +15,13 @@
 
 var Firebase = require('firebase');
 var db = require('../lib/db');
+var helpers = require('../lib/helpers');
 
 //Init Device DB helper
 var devices = new db("devices");
 
 var sonos = require('sonos');
+
 
 var command = function(request, reply) {
 	var data = request.payload.command;
@@ -32,7 +34,7 @@ var command = function(request, reply) {
 			if(!!devices[data.id]){
 				var device = devices[data.id];
 				console.log("FOUND DEVICE", devices[data.id]);
-
+				console.log("BIG DATA!", group[i]);
 				//insteon
 				if (device.designRef === 'insteonLightSwitch') {
 					var Insteon = require('home-controller').Insteon;
@@ -52,6 +54,10 @@ var command = function(request, reply) {
 			}
 		})
 	}
+	//Device Firebase improvement:
+	//ok so for commands I am going initailize a Souter.ask() so that we can get up to date data right away.
+	//BOOM.
+	//This also means the remote will cause chunks to fire if a chunk uses the remote controlled device as a trigger.
 
 	devices.load(function(elements){
 		var group = [];
@@ -63,18 +69,21 @@ var command = function(request, reply) {
 				}
 			}
 		}
-		console.log("HERES UR BATCH", group);
+		//console.log("HERES UR BATCH", group);
 		
 		if (group[0].designRef === 'insteonLightSwitch') {
-			var Insteon = require('home-controller').Insteon;
+			var Insteon = require('../../../home-controller').Insteon;
 			var gw = new Insteon();
 			gw.connect(group[0].settings.hubIp, function(){
 				var successCount = 0;
 				for (var i = 0; i < group.length; i++) {
 					if (!!group[i].settings.devID) {
+						var device = group[i];
 						console.log("insteonLightSwitch COMMAND", group[i].settings.devID, data.data.level)
 						insteon(gw, group[i], data, function(result) {
 							console.log("finished", result);
+							//update firebase with a shouter!
+							new helpers.Shouter({id: device.id, onDemand: true});
 							successCount++;
 							if (successCount === group.length) {
 								gw.close();
@@ -88,9 +97,13 @@ var command = function(request, reply) {
 			var successCount = 0;
 			for (var i = 0; i < group.length; i++) {
 				var device = new sonos.Sonos(group[i].settings.ip, group[i].settings.port);
+				//for scope sake!
+				var deviceDBref = group[i];
 				if (data.method === 'play') {
 					device.play(function(){
 						successCount++;
+						//update firebase with a shouter!
+						new helpers.Shouter({id: deviceDBref.id, onDemand: true})
 						if (successCount === group.length) {
 							reply("SUCCESS").code(200);
 						}
@@ -98,6 +111,8 @@ var command = function(request, reply) {
 				} else if(data.method === 'pause') {
 					device.pause(function(){
 						successCount++;
+						//update firebase with a shouter!
+						new helpers.Shouter({id: deviceDBref.id, onDemand: true})
 						if (successCount === group.length) {
 							reply("SUCCESS").code(200);
 						}
@@ -105,6 +120,8 @@ var command = function(request, reply) {
 				} else if(data.method === 'stop') {
 					device.stop(function(){
 						successCount++;
+						//update firebase with a shouter!
+						new helpers.Shouter({id: deviceDBref.id, onDemand: true})
 						if (successCount === group.length) {
 							reply("SUCCESS").code(200);
 						}
@@ -112,14 +129,27 @@ var command = function(request, reply) {
 				} else if(data.method === 'setVolume') {
 					device.setVolume(data.data.volume, function(){
 						successCount++;
+						//update firebase with a shouter!
+						new helpers.Shouter({id: deviceDBref.id, onDemand: true})
 						if (successCount === group.length) {
 							reply("SUCCESS").code(200);
 						}
 					});
+				} else if(data.method === 'queueSpotify') {
+					device.queueSpotify(data.data.uri, function(result, error){
+						console.log(result, error);
+						successCount++;
+						//update firebase with a shouter!
+						new helpers.Shouter({id: deviceDBref.id, onDemand: true})
+						if (successCount === group.length) {
+							reply("SUCCESS").code(200);
+						}
+					})
 				}
 			};
-			
 		}
+
+
 	});
 
 
@@ -129,7 +159,23 @@ var command = function(request, reply) {
 		setTimeout(function(){
 			if (data.method === "turnOnFast") {
 				gw.turnOnFast(device.settings.devID, function(error, result) {
-					console.log(error, result);
+					//console.log(error, result);
+	
+					console.timeEnd("light");
+					cb(result);
+
+				});
+			} else if (data.method === "turnOn") {
+				gw.turnOn(device.settings.devID, data.data.level, data.data.rampRate, function(error, result) {
+					//console.log(error, result);
+	
+					console.timeEnd("light");
+					cb(result);
+
+				});
+			} else if (data.method === "turnOff") {
+				gw.turnOff(device.settings.devID, data.data.rampRate, function(error, result) {
+					//console.log(error, result);
 	
 					console.timeEnd("light");
 					cb(result);
@@ -137,7 +183,7 @@ var command = function(request, reply) {
 				});
 			} else if(data.method === "turnOffFast") {
 				gw.turnOffFast(device.settings.devID, function(error, result) {
-					console.log(error, result);
+					//console.log(error, result);
 	
 					console.timeEnd("light");
 					cb(result);
@@ -145,7 +191,7 @@ var command = function(request, reply) {
 			} else if(data.method === "setLevel") {
 				if (!!data.data.level || data.data.level === 0) {
 					gw.level(device.settings.devID, data.data.level, function(error, result){
-						console.log(error, result); // Should print 50
+						//console.log(error, result); // Should print 50
 		
 						console.timeEnd("light");
 						cb(result);
@@ -153,14 +199,14 @@ var command = function(request, reply) {
 				}
 			} else if(data.method === "getLevel") {
 				gw.level(device.settings.devID, function(error, result){
-					console.log(error, result); // Should print 50
+					//console.log(error, result); // Should print 50
 	
 					console.timeEnd("light");
 					cb(result);
 				});
 			} else if(data.method === "getDeviceInfo") {
 				gw.info(device.settings.devID, function(error, result){
-					console.log(error, result); // Should print 50
+					//console.log(error, result); // Should print 50
 	
 					console.timeEnd("light");
 					cb(result);
@@ -169,14 +215,14 @@ var command = function(request, reply) {
 				//HALF BROKEN... throws error, kills server, after a link is made.
 				gw.link('gw', [device.settings.devID], function(error, link) {
 				  // link data from gateway
-				    console.log(error, link);
+				    //console.log(error, link);
 				
 					console.timeEnd("light");
 					cb(link);
 				});
 			} else if(data.method === "getLinks") {
 				gw.links(function(error, result){
-					console.log(error, result);
+					//console.log(error, result);
 	
 					console.timeEnd("light");
 					cb(result);
