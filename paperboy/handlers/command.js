@@ -57,7 +57,7 @@ var command = function(request, reply) {
 						insteon(gw, group[i], data, function(result) {
 							console.log("finished", result);
 							//update firebase with a shouter!
-							new helpers.Shouter({id: device.id, onDemand: true})
+							new helpers.Shouter({id: device.id, onDemand: true});
 							successCount++;
 							if (successCount === group.length) {
 								gw.close();
@@ -202,7 +202,24 @@ var command = function(request, reply) {
 
 					});
 				}
-			} else if (data.func === "turnOff") {
+			} else if (data.func === "lightSwitchBrightness") {
+                                var setPercent100 = _.find(data.data, {dataType: "setPercent100"});
+                                console.log("SOME DATA TEST:", setPercent100.dataValue);
+				if(setPercent100.dataValue === 0) {
+					gw.turnOff(device.settings.devID, 1000 , function(error, result) {
+						console.timeEnd("light");
+						cb(result);
+					});
+				} else {
+                                        gw.turnOn(device.settings.devID, setPercent100.dataValue, 1000, function(error, result) {
+                                                //console.log(error, result);
+
+                                                console.timeEnd("light");
+                                                cb(result);
+
+                                        });
+				}
+                        } else if (data.func === "turnOff") {
 				gw.turnOff(device.settings.devID, data.data.rampRate, function(error, result) {
 					//console.log(error, result);
 	

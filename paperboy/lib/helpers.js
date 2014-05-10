@@ -479,10 +479,6 @@ var Shouter = function(config) {
 				//volume
 				device.getVolume(function(err, result){
 					state.volume = result;
-					//queue of 100 songs 
-					device.getMusicLibrary('tracks', {start: 0, total: 100}, function(err, result){
-						
-						state.queue = result.items;
 						device.currentState(function(err, result){
 							//console.log("TEST",result);
 							if (!!result) {
@@ -490,8 +486,7 @@ var Shouter = function(config) {
 							};
 							//return /* online playing song queue (list) volume 	*/
 							cb(state);
-						})
-					});
+						});
 				})
 			});
 		} else if (data.type === "Pebble") {
