@@ -5,6 +5,7 @@ var _ = require('lodash');
 var db = require('./db');
 
 
+
 //Device API's
 var sonos = require('sonos');
 var WeMo = new require('wemo');
@@ -13,12 +14,30 @@ var Action = require('./Action');
 
 //Init Device DB helper
 var devices = new db("devices");
+var initHubs;
 
 devices.load(function(devices){
+	var Insteon = require('./Insteon').Insteon;
 	var initDevices = new Mob();
+	initHubs = new Mob();
+	//var gw;
 	//console.log(devices);
 	devices.forEach(function(device, index, array){
-		initDevices.add(new Shouter({id: device.id}));
+
+		if (device.designRef === "insteonHub") {
+			console.log("insteonHub");
+			Insteon(device, function(hub){
+				initHubs.add(hub);
+				console.log("connected to insteonHub", hub);
+				for (var i = 0; i < device.state.components.length; i++) {
+					initDevices.add(new Shouter({id: device.state.components[i]}));
+				};
+				
+			});
+			
+		} else if(device.designRef !== "insteonLightSwitch" && device.designRef !== "insteonSwitch") {
+			initDevices.add(new Shouter({id: device.id}));
+		}
 	})
 });
 
@@ -138,40 +157,46 @@ var Shouter = function(config) {
 		} else if (data.designRef === "Pebble") {
 
 		} else if (data.designRef === "insteonLightSwitch") {
-			var Insteon = require('home-controller').Insteon;
-			data.local = {};
-			data.local.gw = new Insteon();
+			//var Insteon = require('home-controller').Insteon;
+			// data.local = {};
+			// data.local.gw = new Insteon();
 			//per LightSwitch: grab current "onLevel", "ramprate", "online"
 			//SO connect to it. online (true or false). grab onLevel. grab rampRate. close connection. update firebase. that.init()
-			data.local.gw.connect(data.settings.hubIp, function(){
-				console.log("insteonLightSwitch CONNECT", data.settings.devID);
-				data.settings.online = true;
-				var successCount = 0;
-				data.local.gw.onLevel(data.settings.devID, function(err, result){
-					data.settings.onLevel = result;
-					successCount++;
-					console.log("successCount", successCount);
-					if (successCount === 2) {
-						new Firebase("https://clydedev.firebaseio.com/devices/" + data.id).update({settings: data.settings})
-						data.local.gw.close();
-						that.init();
-					}
-				});
+			// data.local.gw.connect(data.settings.hubIp, function(){
+				initHubs.find(data.settings.hubId, function(gw) {
+					console.log("HOME", gw);
 
-				data.local.gw.rampRate(data.settings.devID, function(err, result){
-					data.settings.rampRate = result;
-					successCount++;
-					console.log("successCount", successCount);
-					if (successCount === 2) {
-						new Firebase("https://clydedev.firebaseio.com/devices/" + data.id).update({settings: data.settings})
-						data.local.gw.close();
-						that.init();
-					}
-				});
+
+					console.log("insteonLightSwitch CONNECT", data.settings.devID);
+					data.settings.online = true;
+					var successCount = 0;
+					gw.onLevel(data.settings.devID, function(result, err){
+						console.log("RESULT", result);
+						data.settings.onLevel = result;
+						successCount++;
+						console.log("successCount", successCount);
+						if (successCount === 2) {
+							new Firebase("https://clydedev.firebaseio.com/devices/" + data.id).update({settings: data.settings})
+							//data.local.gw.close();
+							that.init();
+						}
+					});
+
+					gw.rampRate(data.settings.devID, function(result, err){
+						data.settings.rampRate = result;
+						successCount++;
+						console.log("successCount", successCount);
+						if (successCount === 2) {
+							new Firebase("https://clydedev.firebaseio.com/devices/" + data.id).update({settings: data.settings})
+							//data.local.gw.close();
+							that.init();
+						}
+					});
 				// if (!!data.settings.devID) {
 				// 	console.log('Connected!');
 				// }
-			})
+			//})
+				})
 		}
 
 	});
@@ -179,8 +204,9 @@ var Shouter = function(config) {
 	//separate as function so we can start a loop on the fly.
 	this.init = function() {
 		if (!data.state) {
-			data.state = {};
+			data.state = {hold: false};
 		}
+		data.state.hold = false;
 		var that = this;
 		
 
@@ -265,7 +291,12 @@ var Shouter = function(config) {
 						console.log("INSTEON LIGHT SWITCH CHANGE: level.", result.level);
 						data.state.level = result.level;
 						//Firebase: Post up the device... maybe Catcher event!
-						new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({level: data.state.level})
+						if (!!data.state.level || data.state.level === 0) {
+							new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({level: data.state.level})
+						} else {
+							console.log("Something went wrong with level:", data.state.level)
+						}
+						
 					}
 					//rampRate
 					if (data.state.rampRate !== result.rampRate) {
@@ -295,57 +326,62 @@ var Shouter = function(config) {
 			data.settings.pollRate = 1000;
 			console.log("INIT SONOS");
 			data.settings.process = setInterval(function(){
-
-				that.ask(function(result) {
-
-					//console.log("DATA STATE\n", data.state);
-					//is this device online
-					if (data.state.online !== result.online) {
-						// Sculley: data change
-						console.log("SONOS CHANGE: ONLINE.", result.online);
-						data.state.online = (result.online ? true : false);
-						//Firebase: Post up the device... maybe Catcher event!
-						new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({online: data.state.online})
-					}
-					//is this device playing
-					if (data.state.playing !== result.playing && !!result.playing) {
-						// Sculley: data change
-						console.log("SONOS CHANGE: PLAYING.", result.playing);
-						data.state.playing = result.playing;
-						//Firebase: Post up the device... maybe Catcher event!
-						new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({playing: data.state.playing})
-					}
-					//the play queue
-					if (data.state.queue === "_temp" || _.difference(data.state.queue, result.queue).length !== 0) {
-						// Sculley: data change
-						console.log("SONOS CHANGE: QUEUE.", result.queue);
-						data.state.queue = result.queue;
-						//Firebase: Post up the device... maybe Catcher event!
-						new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({queue: data.state.queue})
-					}
-					//current playing song
-					if (!data.state.song || data.state.song.artist !== result.song.artist || data.state.song.title !== result.song.title || data.state.song.album !== result.song.album) {
-						// Sculley: data change
-						console.log("SONOS CHANGE: SONG.", result.song);
-						data.state.song = result.song;
-						//Firebase: Post up the device... maybe Catcher event!
-						new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({song: data.state.song})
-					}
-					//the current volume
-					if (data.state.volume !== result.volume) {
-						// Sculley: data change
-						console.log("SONOS CHANGE: VOLUME.", result.volume);
-						data.state.volume = result.volume;
-						//Firebase: Post up the device... maybe Catcher event!
-						new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({volume: data.state.volume})
-					}
-					//only run shouter once!!!
-					
-					if (config.onDemand === true) {
-						console.log(config);
-						that.destroy();
-					}
-				});
+				if (!data.state.hold) {
+					that.ask(function(result) {
+						if (!!result) {
+							//console.log("DATA STATE\n", data.state);
+							//is this device online
+							if (data.state.online !== result.online) {
+								// Sculley: data change
+								console.log("SONOS CHANGE: ONLINE.", result.online);
+								data.state.online = (result.online ? true : false);
+								//Firebase: Post up the device... maybe Catcher event!
+								new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({online: data.state.online})
+							}
+							//is this device playing
+							if (data.state.playing !== result.playing && !!result.playing) {
+								// Sculley: data change
+								console.log("SONOS CHANGE: PLAYING.", result.playing);
+								data.state.playing = result.playing;
+								//Firebase: Post up the device... maybe Catcher event!
+								new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({playing: data.state.playing})
+							}
+							//the play queue
+							if (data.state.queue === "_temp" || _.difference(data.state.queue, result.queue).length !== 0) {
+								// Sculley: data change
+								console.log("SONOS CHANGE: QUEUE.", result.queue);
+								data.state.queue = result.queue;
+								//Firebase: Post up the device... maybe Catcher event!
+								new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({queue: data.state.queue})
+							}
+							//current playing song
+							if (!data.state.song || data.state.song.artist !== result.song.artist || data.state.song.title !== result.song.title || data.state.song.album !== result.song.album) {
+								// Sculley: data change
+								console.log("SONOS CHANGE: SONG.", result.song);
+								data.state.song = result.song;
+								//Firebase: Post up the device... maybe Catcher event!
+								new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({song: data.state.song})
+							}
+							//the current volume
+							if (data.state.volume !== result.volume) {
+								// Sculley: data change
+								console.log("SONOS CHANGE: VOLUME.", result.volume);
+								data.state.volume = result.volume;
+								//Firebase: Post up the device... maybe Catcher event!
+								new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({volume: data.state.volume})
+							}
+							//only run shouter once!!!
+							
+							if (config.onDemand === true) {
+								console.log(config);
+								that.destroy();
+							}
+						} else {
+							console.log("RESULT FAILED", result);
+						}
+						
+					});
+				}
 			}, data.settings.pollRate);
 			//console.log(data.settings.process)
 
@@ -402,71 +438,117 @@ var Shouter = function(config) {
 			//var gw = new Insteon();
 			var state = {};
 			//var successCount = 0;
-			try {
-				data.local.gw.connect(data.settings.hubIp, function(){
+			initHubs.find(data.settings.hubId, function(gw) {
+					//console.log("HOME", gw);
 					state.online = true;
-					//successCount++;
+					//console.log(gw.checkStatus(data.settings.devID));
 					
-					/*
-					console.log("insteonLightSwitch ASK", data.settings.devID);
-					*/
 					
-					//sorry to confuse structure here a bit. var state represent the "state" in the json. BUT
-					//I break a rule here: I add state.settings for rampRate & onLevel, because they aren't an active state, but a extra setting.
+						gw.level(data.settings.devID, function(result, err){
+							state.level = result;
+							if ((result < 2 || result === 0) && (err !== "404")) {
+								state.on = false;
+							} else {
+								state.on = true;
+							}
 
-					//grab onLevel, level, rampRate.
-					//infer online, on.
-					// gw.onLevel(data.settings.devID, function(err, result){
-					// 	state.settings.onLevel = result;
-					// 	successCount++
-					// 	if (successCount === 4) {
-					// 		gw.close();
-					// 		console.timeEnd("insteonLightSwitch" + data.settings.devID);
-					// 		cb(state);
-					// 	}
-					// });
-					// gw.rampRate(data.settings.devID, function(err, result){
-					// 	state.settings.rampRate = result;
-					// 	successCount++
-					// 	if (successCount === 4) {
-					// 		gw.close();
-					// 		console.timeEnd("insteonLightSwitch" + data.settings.devID);
-					// 		cb(state);
-					// 	}
-					// });
-					data.local.gw.level(data.settings.devID, function(err, result){
-						state.level = result;
-						if (result <= 3) {
-							state.on = false;
-						} else {
-							state.on = true;
-						}
-
-						if (!!err) {
-							console.log("ERROOOOORRRRR!!", err);
-						};
-						
-						//successCount++
-						//if (successCount === 4) {
-							data.local.gw.close();
+							if (err) {
+								console.log("ERROOOOORRRRR!!", err);
+							};
+							if (result === 0 && data.state.level > 0) {
+								data.state.hold = true;
+							};
+							if (result === 0 && data.state.hold === true) {
+								console.log("checking again - please hold", data.state);
+								setTimeout(function(){
+									gw.level(data.settings.devID, function(result, err){
+										state.level = result;
+										if ((result < 2 || result === 0) && (err !== "404")) {
+											state.on = false;
+										} else {
+											state.on = true;
+										}
+										if (result === 0) {
+											data.state.hold = false;
+										};
+										cb(state);
+									});
+								}, 500);
+							} else {
+								data.state.hold = false;
+								cb(state);
+							}
 							
-							/*
-							console.timeEnd("insteonLightSwitch" + data.settings.devID);
-							*/
+						});
+					
+					
+			});
 
-							cb(state);
-						//}
+			// try {
+			// 	data.local.gw.connect(data.settings.hubIp, function(){
+			// 		state.online = true;
+			// 		//successCount++;
+					
+			// 		/*
+			// 		console.log("insteonLightSwitch ASK", data.settings.devID);
+			// 		*/
+					
+			// 		//sorry to confuse structure here a bit. var state represent the "state" in the json. BUT
+			// 		//I break a rule here: I add state.settings for rampRate & onLevel, because they aren't an active state, but a extra setting.
 
-						/*if (result === 0 && truelyOff >= 2) {
+			// 		//grab onLevel, level, rampRate.
+			// 		//infer online, on.
+			// 		// gw.onLevel(data.settings.devID, function(err, result){
+			// 		// 	state.settings.onLevel = result;
+			// 		// 	successCount++
+			// 		// 	if (successCount === 4) {
+			// 		// 		gw.close();
+			// 		// 		console.timeEnd("insteonLightSwitch" + data.settings.devID);
+			// 		// 		cb(state);
+			// 		// 	}
+			// 		// });
+			// 		// gw.rampRate(data.settings.devID, function(err, result){
+			// 		// 	state.settings.rampRate = result;
+			// 		// 	successCount++
+			// 		// 	if (successCount === 4) {
+			// 		// 		gw.close();
+			// 		// 		console.timeEnd("insteonLightSwitch" + data.settings.devID);
+			// 		// 		cb(state);
+			// 		// 	}
+			// 		// });
+			// 		data.local.gw.level(data.settings.devID, function(err, result){
+			// 			state.level = result;
+			// 			if (result <= 3) {
+			// 				state.on = false;
+			// 			} else {
+			// 				state.on = true;
+			// 			}
 
-						} else {
+			// 			if (!!err) {
+			// 				console.log("ERROOOOORRRRR!!", err);
+			// 			};
+						
+			// 			//successCount++
+			// 			//if (successCount === 4) {
+			// 				data.local.gw.close();
+							
+			// 				/*
+			// 				console.timeEnd("insteonLightSwitch" + data.settings.devID);
+			// 				*/
 
-						}*/
-					});
-				})
-			} catch (e) {
+			// 				cb(state);
+			// 			//}
+
+			// 			/*if (result === 0 && truelyOff >= 2) {
+
+			// 			} else {
+
+			// 			}*/
+			// 		});
+			// 	})
+			// } catch (e) {
 				
-			}
+			// }
 		} else if (data.designRef === "sonosSpeaker") {
 			var device = new sonos.Sonos(data.settings.ip, data.settings.port);
 			//console.log("SONOS ASK\n", data, device);
@@ -525,7 +607,7 @@ var Mob = function() {
 	this.find = function (id, cb) {
 		collection.forEach(function(device, index, array){
 			if (device.id === id) {
-				cb(collection);
+				cb(device);
 			}
 		});
 	}
