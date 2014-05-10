@@ -71,6 +71,12 @@ var command = function(request, reply) {
 			var successCount = 0;
 			for (var i = 0; i < group.length; i++) {
 				var device = new sonos.Sonos(group[i].settings.ip, group[i].settings.port);
+				var SonosDiscovery = require('sonos-discovery');
+				var discovery = new SonosDiscovery();
+				console.log("DISCOVERY",discovery);
+				setTimeout(function(){
+					console.log("DISCOVERY",discovery);
+				},2000);
 				//for scope sake!
 				var deviceDBref = group[i];
 				if (data.func === 'play') {
@@ -89,6 +95,19 @@ var command = function(request, reply) {
 						new helpers.Shouter({id: deviceDBref.id, onDemand: true})
 						if (successCount === group.length) {
 							reply("SUCCESS").code(200);
+						}
+					});
+				} else if(data.func === 'playlists') {
+					
+
+					device.getMusicLibrary('playlists', {start: 0, total: 25}, function(err, result){
+						
+						successCount++;
+						//update firebase with a shouter!
+						new helpers.Shouter({id: deviceDBref.id, onDemand: true})
+						if (successCount === group.length) {
+							console.log([err, result]);
+							//reply([result, err]).code(200);
 						}
 					});
 				} else if(data.func === 'speakerTextToSpeech') {

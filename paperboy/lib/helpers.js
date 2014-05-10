@@ -55,10 +55,10 @@ var Shouter = function(config) {
 			}
 		}*/
 	}
-	process.on('uncaughtException', function (err) {
-	  console.log('Caught exception: ' + err);
-	  console.log("ERROOOOORRRRR", err, data);
-	});
+	// process.on('uncaughtException', function (err) {
+	//   console.log('Caught exception: ' + err);
+	//   console.log("ERROOOOORRRRR", err, data);
+	// });
 
 
 	
@@ -115,7 +115,7 @@ var Shouter = function(config) {
 			var client = sonos.search();
 			client.on('DeviceAvailable', function(device, model) {
 			  device.deviceDescription(function(err, details){
-			  	console.log("SONOS",device);
+			  	//console.log("SONOS",device);
 			  	if (details.serialNum === data.settings.serialNum && !data.settings.UDN) {
 			  		console.log("SONOS",device);
 			  		data.settings.ip = device.host;
@@ -130,6 +130,7 @@ var Shouter = function(config) {
 					new Firebase("https://clydedev.firebaseio.com/devices/" + data.id).update({settings: data.settings})
 					that.init();
 			  	} else if (details.serialNum === data.settings.serialNum) {
+			  		console.log("SONOS",device);
 			  		that.init();
 			  	}
 			  });
@@ -138,31 +139,32 @@ var Shouter = function(config) {
 
 		} else if (data.designRef === "insteonLightSwitch") {
 			var Insteon = require('home-controller').Insteon;
-			var gw = new Insteon();
+			data.local = {};
+			data.local.gw = new Insteon();
 			//per LightSwitch: grab current "onLevel", "ramprate", "online"
 			//SO connect to it. online (true or false). grab onLevel. grab rampRate. close connection. update firebase. that.init()
-			gw.connect(data.settings.hubIp, function(){
+			data.local.gw.connect(data.settings.hubIp, function(){
 				console.log("insteonLightSwitch CONNECT", data.settings.devID);
 				data.settings.online = true;
 				var successCount = 0;
-				gw.onLevel(data.settings.devID, function(err, result){
+				data.local.gw.onLevel(data.settings.devID, function(err, result){
 					data.settings.onLevel = result;
 					successCount++;
 					console.log("successCount", successCount);
 					if (successCount === 2) {
 						new Firebase("https://clydedev.firebaseio.com/devices/" + data.id).update({settings: data.settings})
-						gw.close();
+						data.local.gw.close();
 						that.init();
 					}
 				});
 
-				gw.rampRate(data.settings.devID, function(err, result){
+				data.local.gw.rampRate(data.settings.devID, function(err, result){
 					data.settings.rampRate = result;
 					successCount++;
 					console.log("successCount", successCount);
 					if (successCount === 2) {
 						new Firebase("https://clydedev.firebaseio.com/devices/" + data.id).update({settings: data.settings})
-						gw.close();
+						data.local.gw.close();
 						that.init();
 					}
 				});
@@ -396,12 +398,12 @@ var Shouter = function(config) {
 			/*
 			console.time("insteonLightSwitch" + data.settings.devID);
 			*/
-			var Insteon = require('home-controller').Insteon;
-			var gw = new Insteon();
+			//var Insteon = require('home-controller').Insteon;
+			//var gw = new Insteon();
 			var state = {};
 			//var successCount = 0;
 			try {
-				gw.connect(data.settings.hubIp, function(){
+				data.local.gw.connect(data.settings.hubIp, function(){
 					state.online = true;
 					//successCount++;
 					
@@ -432,7 +434,7 @@ var Shouter = function(config) {
 					// 		cb(state);
 					// 	}
 					// });
-					gw.level(data.settings.devID, function(err, result){
+					data.local.gw.level(data.settings.devID, function(err, result){
 						state.level = result;
 						if (result <= 3) {
 							state.on = false;
@@ -446,7 +448,7 @@ var Shouter = function(config) {
 						
 						//successCount++
 						//if (successCount === 4) {
-							gw.close();
+							data.local.gw.close();
 							
 							/*
 							console.timeEnd("insteonLightSwitch" + data.settings.devID);
