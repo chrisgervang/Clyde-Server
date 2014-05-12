@@ -619,16 +619,18 @@ var Mob = function() {
 			if (!!collection[i].id && collection[i].id === id) {
 				//console.log("FOUND");
 				//found++;
-				collection = collection.splice(i, 1);
+				collection.splice(i, 1);
 				return collection;
 			} else if(!!collection[i].getID && collection[i].getID()=== id) {
 				console.log("DESTROY");
 				//found++;
-				collection = collection.splice(i, 1);
+				collection.splice(i, 1);
 				console.log("AFTER DESTROY", collection);
 				return collection;
 
 			}
+
+			var index = collection
 		};
 	}
 	this.find = function (id, cb) {
