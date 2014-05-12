@@ -4,17 +4,19 @@ var hub = {};
 var in_init = function(config, cb) {
 	if (!hub.id) {
 		new Insteon(config, function(result){
-		hub = result
+			hub = result
 			cb(hub);
 		});
 	} else {
+		//console.log("HUB", hub, "CB", cb)
 		cb(hub);
 	}
 	
 }
 
 var Insteon = function(config, cb) {
-	var Insteon = require('home-controller').Insteon;
+	//var Insteon = require('home-controller').Insteon;
+	var Insteon = require('../../../home-controller').Insteon;
 	// this.config = config;
 	_.assign(this, config);
 	var inner = {};
@@ -29,7 +31,7 @@ var Insteon = function(config, cb) {
 				inner.gw.ping(that.settings.devID, function(){
 					console.log("Success ping!");
 				})
-			},60000)
+			},300000)
 			cb(that);
 		});
 
@@ -42,7 +44,8 @@ var Insteon = function(config, cb) {
 		if (that.state.online === true) {
 			inner.gw.level(devId, function(err, result){
 				if (err === "404") {
-					console.log("ERROR",err, devId)
+					console.log("ERROR",err, devId);
+					cb(null, err);
 				} else {
 					cb(result, err);
 				}
@@ -71,8 +74,46 @@ var Insteon = function(config, cb) {
 			cb(null, "Error: Hub not online");
 		}
 	}
-	
-
+	this.turnOnFast = function(devId, cb) {
+		var that = this;
+		if (that.state.online === true) {
+			inner.gw.turnOnFast(devId, function(err, result){
+				cb(result);
+			});
+		} else {
+			cb(null, "Error: Hub not online");
+		}
+	}
+	this.turnOffFast = function(devId, cb) {
+		var that = this;
+		if (that.state.online === true) {
+			inner.gw.turnOffFast(devId, function(err, result){
+				cb(result);
+			});
+		} else {
+			cb(null, "Error: Hub not online");
+		}
+	}
+	this.turnOff = function(devId, ramp, cb) {
+		var that = this;
+		if (that.state.online === true) {
+			inner.gw.turnOff(devId, ramp, function(err, result){
+				cb(result);
+			});
+		} else {
+			cb(null, "Error: Hub not online");
+		}
+	}
+	this.turnOn = function(devId, level, ramp, cb) {
+		var that = this;
+		if (that.state.online === true) {
+			inner.gw.turnOn(devId, level, ramp, function(err, result){
+				cb(result);
+			});
+		} else {
+			cb(null, "Error: Hub not online");
+		}
+	}
 	
 }
 

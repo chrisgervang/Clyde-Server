@@ -32,8 +32,29 @@ var command = function(request, reply) {
 	//ok so for commands I am going initailize a Souter.ask() so that we can get up to date data right away.
 	//BOOM.
 	//This also means the remote will cause chunks to fire if a chunk uses the remote controlled device as a trigger.
+	var initHubs;
+
+	
 
 	devices.load(function(elements){
+		initHubs = new Mob();
+		var Insteon = require('../lib/Insteon').Insteon;
+		
+		for (var i = 0; i < elements.length; i++) {
+			if (elements[i].designRef === "insteonHub") {
+				console.log("insteonHub");
+				//console.log("HERES WHAT WE GOT", elements[i])
+				Insteon(elements[i], function(hub){
+					initHubs.add(hub);
+					console.log("connected to insteonHub");
+					// for (var i = 0; i < elements[i].state.components.length; i++) {
+					// 	initDevices.add(new Shouter({id: device.state.components[i]}));
+					// };
+					
+				});
+			};
+		};
+
 		var group = [];
 		console.log(elements.length, data.id.length);
 		for (var i = 0; i < elements.length; i++) {
@@ -46,21 +67,24 @@ var command = function(request, reply) {
 		//console.log("HERES UR BATCH", group);
 		
 		if (group[0].designRef === 'insteonLightSwitch') {
-			var Insteon = require('../../../home-controller').Insteon;
-			var gw = new Insteon();
-			gw.connect(group[0].settings.hubIp, function(){
+			//var Insteon = require('../../../home-controller').Insteon;
+			//var gw = new Insteon();
+
+
+			initHubs.find(group[0].settings.hubId, function(gw) {			
+				console.log("FOUND HUB", gw);
 				var successCount = 0;
 				for (var i = 0; i < group.length; i++) {
 					if (!!group[i].settings.devID) {
 						var device = group[i];
-						console.log("insteonLightSwitch COMMAND", group[i].settings.devID, data.data.level)
-						insteon(gw, group[i], data, function(result) {
+						console.log("insteonLightSwitch COMMAND", group[i].settings.devID, group[i].settings.hubId)
+						insteonCommand(gw, group[i], data, function(result) {
 							console.log("finished", result);
 							//update firebase with a shouter!
-							new helpers.Shouter({id: device.id, onDemand: true});
+							//new helpers.Shouter({id: device.id, onDemand: true});
 							successCount++;
 							if (successCount === group.length) {
-								gw.close();
+								//gw.close();
 								reply("SUCCESS").code(200);
 							}
 						});
@@ -161,135 +185,6 @@ var command = function(request, reply) {
 
 
 	});
-
-
-	//insteon
-	var insteon = function(gw, device, data, cb) {
-		console.time("light");
-		setTimeout(function(){
-			if (data.func === "turnOnFast") {
-				gw.turnOnFast(device.settings.devID, function(error, result) {
-					//console.log(error, result);
-	
-					console.timeEnd("light");
-					cb(result);
-
-				});
-			} else if (data.func === "turnOn") {
-				gw.turnOn(device.settings.devID, data.data.level, data.data.rampRate, function(error, result) {
-					//console.log(error, result);
-	
-					console.timeEnd("light");
-					cb(result);
-
-				});
-			} else if (data.func === "lightSwitchState") {
-				var setIfBoolean = _.find(data.data, {dataType: "setIfBoolean"});
-				if (setIfBoolean.dataValue === true) {
-					gw.turnOnFast(device.settings.devID, function(error, result) {
-						//console.log(error, result);
-		
-						console.timeEnd("light");
-						cb(result);
-
-					});
-				} else if (setIfBoolean.dataValue === false) {
-					gw.turnOffFast(device.settings.devID, function(error, result) {
-						//console.log(error, result);
-		
-						console.timeEnd("light");
-						cb(result);
-
-					});
-				}
-			} else if (data.func === "lightSwitchBrightness") {
-                                var setPercent100 = _.find(data.data, {dataType: "setPercent100"});
-                                console.log("SOME DATA TEST:", setPercent100.dataValue);
-				if(setPercent100.dataValue === 0) {
-					gw.turnOff(device.settings.devID, 1000 , function(error, result) {
-						console.timeEnd("light");
-						cb(result);
-					});
-				} else {
-                                        gw.turnOn(device.settings.devID, setPercent100.dataValue, 1000, function(error, result) {
-                                                //console.log(error, result);
-
-                                                console.timeEnd("light");
-                                                cb(result);
-
-                                        });
-				}
-                        } else if (data.func === "turnOff") {
-				gw.turnOff(device.settings.devID, data.data.rampRate, function(error, result) {
-					//console.log(error, result);
-	
-					console.timeEnd("light");
-					cb(result);
-
-				});
-			} else if(data.func === "turnOffFast") {
-				gw.turnOffFast(device.settings.devID, function(error, result) {
-					//console.log(error, result);
-	
-					console.timeEnd("light");
-					cb(result);
-				});
-			} else if(data.func === "setLevel") {
-				if (!!data.data.level || data.data.level === 0) {
-					gw.level(device.settings.devID, data.data.level, function(error, result){
-						//console.log(error, result); // Should print 50
-		
-						console.timeEnd("light");
-						cb(result);
-					});
-				}
-			} else if(data.func === "getLevel") {
-				gw.level(device.settings.devID, function(error, result){
-					//console.log(error, result); // Should print 50
-	
-					console.timeEnd("light");
-					cb(result);
-				});
-			} else if(data.func === "getDeviceInfo") {
-				gw.info(device.settings.devID, function(error, result){
-					//console.log(error, result); // Should print 50
-	
-					console.timeEnd("light");
-					cb(result);
-				});
-			} else if(data.func === "linkDevice") {
-				//HALF BROKEN... throws error, kills server, after a link is made.
-				gw.link('gw', [device.settings.devID], function(error, link) {
-				  // link data from gateway
-				    //console.log(error, link);
-				
-					console.timeEnd("light");
-					cb(link);
-				});
-			} else if(data.func === "getLinks") {
-				gw.links(function(error, result){
-					//console.log(error, result);
-	
-					console.timeEnd("light");
-					cb(result);
-				});
-			} else if(data.func === "unlinkDevice") {
-				//HALF BROKEN... throws error, kills server, after a link is made.
-				gw.unlink('gw', [device.settings.devID], function(error, link) {
-				  // link data from gateway
-				    console.log(error, link);
-				
-					console.timeEnd("light");
-					cb(link);
-				});
-			}
-			//BROKEN
-			// gw.turnOff(data.settings.devID, 3000, function(error, result) {
-			// 	console.log(error, result);
-			// });
-		}, 0);
-	}
-
 	/*if (request.params.type === "device") {
 		//grab {obj} of all devices. the firebase ID is the key. Note: this is not an array.
 		devices.root.once('value', function(snapshot){
@@ -317,6 +212,161 @@ var command = function(request, reply) {
 			}
 		})
 	}*/
+
 }
+
+//insteon
+var insteonCommand = function(gw, device, data, cb) {
+	console.time("light");
+	setTimeout(function(){
+		if (data.func === "turnOnFast") {
+			gw.turnOnFast(device.settings.devID, function(error, result) {
+				//console.log(error, result);
+
+				console.timeEnd("light");
+				cb(result);
+
+			});
+		} else if (data.func === "turnOn") {
+			gw.turnOn(device.settings.devID, data.data.level, data.data.rampRate, function(error, result) {
+				//console.log(error, result);
+
+				console.timeEnd("light");
+				cb(result);
+
+			});
+		} else if (data.func === "lightSwitchState") {
+			var setIfBoolean = _.find(data.data, {dataType: "setIfBoolean"});
+			if (setIfBoolean.dataValue === true) {
+				gw.turnOnFast(device.settings.devID, function(result, error) {
+					//console.log(error, result);
+	
+					console.timeEnd("light");
+					cb(result);
+
+				});
+			} else if (setIfBoolean.dataValue === false) {
+				gw.turnOffFast(device.settings.devID, function(result, error) {
+					//console.log(error, result);
+	
+					console.timeEnd("light");
+					cb(result);
+
+				});
+			}
+		} else if (data.func === "lightSwitchBrightness") {
+            var setPercent100 = _.find(data.data, {dataType: "setPercent100"});
+            console.log("SOME DATA TEST:", setPercent100.dataValue);
+
+			if (setPercent100.dataValue === 0) {
+				gw.turnOff(device.settings.devID, 1000 , function(result, error) {
+					console.timeEnd("light");
+					cb(result);
+				});
+			} else {
+                gw.turnOn(device.settings.devID, setPercent100.dataValue, 1000, function(result, error) {
+                        //console.log(error, result);
+                        console.timeEnd("light");
+                        cb(result);
+
+                });
+			}
+        } else if (data.func === "turnOff") {
+			gw.turnOff(device.settings.devID, data.data.rampRate, function(error, result) {
+				//console.log(error, result);
+
+				console.timeEnd("light");
+				cb(result);
+
+			});
+		} else if(data.func === "turnOffFast") {
+			gw.turnOffFast(device.settings.devID, function(error, result) {
+				//console.log(error, result);
+
+				console.timeEnd("light");
+				cb(result);
+			});
+		} else if(data.func === "setLevel") {
+			if (!!data.data.level || data.data.level === 0) {
+				gw.level(device.settings.devID, data.data.level, function(error, result){
+					//console.log(error, result); // Should print 50
+	
+					console.timeEnd("light");
+					cb(result);
+				});
+			}
+		} else if(data.func === "getLevel") {
+			gw.level(device.settings.devID, function(error, result){
+				//console.log(error, result); // Should print 50
+
+				console.timeEnd("light");
+				cb(result);
+			});
+		} else if(data.func === "getDeviceInfo") {
+			gw.info(device.settings.devID, function(error, result){
+				//console.log(error, result); // Should print 50
+
+				console.timeEnd("light");
+				cb(result);
+			});
+		} else if(data.func === "linkDevice") {
+			//HALF BROKEN... throws error, kills server, after a link is made.
+			gw.link('gw', [device.settings.devID], function(error, link) {
+			  // link data from gateway
+			    //console.log(error, link);
+			
+				console.timeEnd("light");
+				cb(link);
+			});
+		} else if(data.func === "getLinks") {
+			gw.links(function(error, result){
+				//console.log(error, result);
+
+				console.timeEnd("light");
+				cb(result);
+			});
+		} else if(data.func === "unlinkDevice") {
+			//HALF BROKEN... throws error, kills server, after a link is made.
+			gw.unlink('gw', [device.settings.devID], function(error, link) {
+			  // link data from gateway
+			    console.log(error, link);
+			
+				console.timeEnd("light");
+				cb(link);
+			});
+		}
+		//BROKEN
+		// gw.turnOff(data.settings.devID, 3000, function(error, result) {
+		// 	console.log(error, result);
+		// });
+	}, 0);
+}
+var Mob = function() {
+	//add
+	//destroy
+	//find
+	var collection = []
+	this.add = function(element) {
+		collection.push(element);
+		return collection;
+	}
+	this.destroy = function(id) {
+		collection.forEach(function(device, index, array){
+			if (device.id === id) {
+				collection = collection.splice(index, 1);
+				return collection;
+			}
+		});
+	}
+	this.find = function (id, cb) {
+		collection.forEach(function(device, index, array){
+			if (device.id === id) {
+				cb(device);
+			}
+		});
+	}
+
+}
+
 
 module.exports = command;

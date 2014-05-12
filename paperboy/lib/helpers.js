@@ -265,62 +265,73 @@ var Shouter = function(config) {
 		} if (data.designRef === "insteonLightSwitch") {
 			data.settings.pollRate = 2000;
 			console.log("INIT INSTEON LIGHT SWITCH");
+			data.state.ready = true;
 			data.settings.process = setInterval(function(){
-				that.ask(function(result){
-					//console.log("DATA STATE\n", data.state);
-					//online
-					if (data.state.online !== result.online) {
-						// Sculley: data change
-						console.log("INSTEON LIGHT SWITCH CHANGE: ONLINE.", result.online);
-						data.state.online = (result.online ? true : false);
-						//Firebase: Post up the device... maybe Catcher event!
-						new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({online: data.state.online})
-					}
-					//light on (when level < 3 it is off)
-					if (data.state.on !== result.on) {
-						// Sculley: data change
-						console.log("INSTEON LIGHT SWITCH CHANGE: on.", result.on);
-						data.state.on = (result.on ? true : false);
-						//Firebase: Post up the device... maybe Catcher event!
-						new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({on: data.state.on})
-					}
-					
-					//light level (keeps track of level)
-					if (data.state.level !== result.level) {
-						// Sculley: data change
-						console.log("INSTEON LIGHT SWITCH CHANGE: level.", result.level);
-						data.state.level = result.level;
-						//Firebase: Post up the device... maybe Catcher event!
-						if (!!data.state.level || data.state.level === 0) {
-							new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({level: data.state.level})
-						} else {
-							console.log("Something went wrong with level:", data.state.level)
+				if (data.state.ready ===  true) {
+					data.state.ready = false;
+
+					that.ask(function(result){
+						//console.log("DATA STATE\n", data.state);
+						//online
+						data.state.ready = true;
+						console.log("READY", data.settings.devID);
+						if (data.state.online !== result.online) {
+							// Sculley: data change
+							console.log("INSTEON LIGHT SWITCH CHANGE: ONLINE.", result.online);
+							data.state.online = (result.online ? true : false);
+							//Firebase: Post up the device... maybe Catcher event!
+							new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({online: data.state.online})
+						}
+						//light on (when level < 3 it is off)
+						if (data.state.on !== result.on) {
+							// Sculley: data change
+							console.log("INSTEON LIGHT SWITCH CHANGE: on.", result.on);
+							data.state.on = (result.on ? true : false);
+							//Firebase: Post up the device... maybe Catcher event!
+							new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({on: data.state.on})
 						}
 						
-					}
-					//rampRate
-					if (data.state.rampRate !== result.rampRate) {
-						// Sculley: data change
-						console.log("INSTEON LIGHT SWITCH CHANGE: rampRate.", result.rampRate);
-						data.state.rampRate = result.rampRate;
-						//Firebase: Post up the device... maybe Catcher event!
-						new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/settings/").update({rampRate: data.state.rampRate})
-					}
-					//onLevel
-					if (data.state.onLevel !== result.onLevel) {
-						// Sculley: data change
-						console.log("INSTEON LIGHT SWITCH CHANGE: onLevel.", result.onLevel);
-						data.state.onLevel = result.onLevel;
-						//Firebase: Post up the device... maybe Catcher event!
-						new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/settings/").update({onLevel: data.state.onLevel})
-					}
-					//only run shouter once!!!
+						//light level (keeps track of level)
+						if (data.state.level !== result.level) {
+							// Sculley: data change
+							console.log("INSTEON LIGHT SWITCH CHANGE: level.", result.level);
+							data.state.level = result.level;
+							//Firebase: Post up the device... maybe Catcher event!
+							if (!!data.state.level || data.state.level === 0) {
+								new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({level: data.state.level})
+							} else {
+								console.log("Something went wrong with level:", data.state.level)
+							}
+							
+						}
+						//rampRate
+						if (data.state.rampRate !== result.rampRate) {
+							// Sculley: data change
+							console.log("INSTEON LIGHT SWITCH CHANGE: rampRate.", result.rampRate);
+							data.state.rampRate = result.rampRate;
+							//Firebase: Post up the device... maybe Catcher event!
+							new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/settings/").update({rampRate: data.state.rampRate})
+						}
+						//onLevel
+						if (data.state.onLevel !== result.onLevel) {
+							// Sculley: data change
+							console.log("INSTEON LIGHT SWITCH CHANGE: onLevel.", result.onLevel);
+							data.state.onLevel = result.onLevel;
+							//Firebase: Post up the device... maybe Catcher event!
+							new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/settings/").update({onLevel: data.state.onLevel})
+						}
+						//only run shouter once!!!
 
-					if (config.onDemand === true) {
-						console.log(config);
-						that.destroy();
-					}
-				});
+						if (config.onDemand === true) {
+							console.log("ONE TIME USE... KILL", config);
+							that.destroy();
+						}
+					});
+				
+				} else {
+					console.log("NOT READY", data.settings.devID);
+				}
+				
 			}, data.settings.pollRate)
 		}else if (data.designRef === "sonosSpeaker") {
 			data.settings.pollRate = 1000;
@@ -448,33 +459,40 @@ var Shouter = function(config) {
 							state.level = result;
 							if ((result < 2 || result === 0) && (err !== "404")) {
 								state.on = false;
-							} else {
+							} else if(err !== "404") {
 								state.on = true;
 							}
 
-							if (err) {
+							if (err === "404") {
 								console.log("ERROOOOORRRRR!!", err);
+								data.state.ready = true;
 							};
-							if (result === 0 && data.state.level > 0) {
+							if ((result === 0 && data.state.level > 0) && err !== "404") {
 								data.state.hold = true;
 							};
-							if (result === 0 && data.state.hold === true) {
+							if ((result === 0 && data.state.hold === true) && err !== "404") {
 								console.log("checking again - please hold", data.state);
 								setTimeout(function(){
 									gw.level(data.settings.devID, function(result, err){
 										state.level = result;
 										if ((result < 2 || result === 0) && (err !== "404")) {
 											state.on = false;
-										} else {
+										} else if(err !== "404") {
 											state.on = true;
 										}
-										if (result === 0) {
+
+										if (err === "404") {
+											console.log("ERROOOOORRRRR!!", err);
+											data.state.ready = true;
+										};
+
+										if (result === 0 && err !== "404") {
 											data.state.hold = false;
 										};
 										cb(state);
 									});
 								}, 500);
-							} else {
+							} else if (err !== "404") {
 								data.state.hold = false;
 								cb(state);
 							}
