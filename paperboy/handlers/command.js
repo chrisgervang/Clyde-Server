@@ -131,7 +131,7 @@ var command = function(request, reply) {
 							insteonCommand(gw, group[i], data, function(result) {
 								console.log("finished", result);
 								//update firebase with a shouter!
-								onceCheck(deviceDBref.id);
+								onceCheck(device.id);
 								//new helpers.Shouter({id: device.id, onDemand: true});
 								successCount++;
 								if (successCount === group.length) {
