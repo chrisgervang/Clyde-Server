@@ -29,14 +29,14 @@ devices.load(function(devices){
 			Insteon(device, function(hub){
 				initHubs.add(hub);
 				console.log("connected to insteonHub", hub);
-				for (var i = 0; i < device.state.components.length; i++) {
-					initDevices.add(new Shouter({id: device.state.components[i]}));
-				};
+				// for (var i = 0; i < device.state.components.length; i++) {
+				// 	initDevices.add(new Shouter({id: device.state.components[i]}));
+				// };
 				
 			});
 			
 		} else if(device.designRef !== "insteonLightSwitch" && device.designRef !== "insteonSwitch") {
-			initDevices.add(new Shouter({id: device.id}));
+			//initDevices.add(new Shouter({id: device.id}));
 		}
 	})
 });
@@ -623,11 +623,17 @@ var Mob = function() {
 		});
 	}
 	this.find = function (id, cb) {
-		collection.forEach(function(device, index, array){
-			if (device.id === id) {
-				cb(device);
+		var found = 0;
+		for (var i = 0; i < collection.length; i++) {
+			if (collection[i].id === id) {
+				found++;
+				cb(collection[i]);
 			}
-		});
+		};
+		if (found === 0) {
+			cb(null, "404");
+		};
+		
 	}
 
 }

@@ -23,6 +23,7 @@ var devices = new db("devices");
 var sonos = require('sonos');
 var _ = require('lodash');
 
+var initDevices = new helpers.Mob();
 
 var command = function(request, reply) {
 	var data = request.payload.command;
@@ -69,25 +70,46 @@ var command = function(request, reply) {
 		if (group[0].designRef === 'insteonLightSwitch') {
 			//var Insteon = require('../../../home-controller').Insteon;
 			//var gw = new Insteon();
-
-
 			initHubs.find(group[0].settings.hubId, function(gw) {			
 				console.log("FOUND HUB", gw);
 				var successCount = 0;
 				for (var i = 0; i < group.length; i++) {
 					if (!!group[i].settings.devID) {
-						var device = group[i];
-						console.log("insteonLightSwitch COMMAND", group[i].settings.devID, group[i].settings.hubId)
-						insteonCommand(gw, group[i], data, function(result) {
-							console.log("finished", result);
-							//update firebase with a shouter!
-							//new helpers.Shouter({id: device.id, onDemand: true});
-							successCount++;
-							if (successCount === group.length) {
-								//gw.close();
-								reply("SUCCESS").code(200);
+						if (data.func === "shouter") {
+							var sendCommand = _.find(data.data, {dataType: "sendCommand"});
+							if (sendCommand.dataValue === "once") {
+								new helpers.Shouter({id: group[i].id, onDemand: true});
+							} else if (sendCommand.dataValue === "start") {
+								initDevices.find(group[i].id, function(result, err) {
+									if(err === "404") {
+										console.log("tried and succeeded to start:", group[i].id)
+										initDevices.add(new helpers.Shouter({id: group[i].id}));
+									}
+								});
+							} else if (sendCommand.dataValue === "stop") {
+								initDevices.find(group[i].id, function(shouter, err) {
+									console.log("found shouter", shouter);
+									shouter.destroy();
+									if(err === "404") {
+										console.log("tried and failed to stop:", group[i].id)
+									}
+								});
 							}
-						});
+							
+						} else {
+							var device = group[i];
+							console.log("insteonLightSwitch COMMAND", group[i].settings.devID, group[i].settings.hubId)
+							insteonCommand(gw, group[i], data, function(result) {
+								console.log("finished", result);
+								//update firebase with a shouter!
+								//new helpers.Shouter({id: device.id, onDemand: true});
+								successCount++;
+								if (successCount === group.length) {
+									//gw.close();
+									reply("SUCCESS").code(200);
+								}
+							});
+						}
 					}
 				};
 			});
