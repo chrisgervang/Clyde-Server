@@ -90,12 +90,12 @@ var command = function(request, reply) {
 								});
 							} else if (sendCommand.dataValue === "stop") {
 								initDevices.find(group[i].id, function(shouter, err) {
-									console.log("found shouter", shouter);
-									shouter.destroy();
 									if(err === "404") {
 										console.log("tried and failed to stop:", group[i].id)
 										reply("FAILED").code(200);
 									}
+									console.log("found shouter", shouter);
+									shouter.destroy();
 									reply("SUCCESS").code(200);
 								});
 							}

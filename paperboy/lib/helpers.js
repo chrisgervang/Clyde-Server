@@ -626,6 +626,7 @@ var Mob = function() {
 		var found = 0;
 		for (var i = 0; i < collection.length; i++) {
 			if (collection[i].id === id) {
+				console.log("FOUND");
 				found++;
 				cb(collection[i]);
 			}
