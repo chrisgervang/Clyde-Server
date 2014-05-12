@@ -622,7 +622,7 @@ var Mob = function() {
 				collection = collection.splice(i, 1);
 				return collection;
 			} else if(!!collection[i].getID && collection[i].getID()=== id) {
-				console.log("FOUND");
+				console.log("DESTROY");
 				//found++;
 				collection = collection.splice(i, 1);
 				return collection;

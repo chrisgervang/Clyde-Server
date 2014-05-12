@@ -86,6 +86,8 @@ var command = function(request, reply) {
 										console.log("tried and succeeded to start:", group[i].id)
 										initDevices.add(new helpers.Shouter({id: group[i].id}));
 										reply("SUCCESS").code(200);
+									} else {
+										console.log("this shouter already exists", shouter);
 									}
 								});
 							} else if (sendCommand.dataValue === "stop") {
@@ -95,8 +97,8 @@ var command = function(request, reply) {
 										reply("FAILED").code(200);
 									}
 									console.log("found shouter", shouter);
-									shouter.destroy();
 									initDevices.destroy(group[i].id);
+									shouter.destroy();
 									reply("SUCCESS").code(200);
 								});
 							}
