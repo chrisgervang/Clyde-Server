@@ -28,8 +28,8 @@ var initDevices = new helpers.Mob();
 var onceCheck = function(id) {
 	initDevices.find(id, function(shouter, err) {
 		if(err === "404") {
-			console.log("tried and succeeded to once:", group[i].id)
-			new helpers.Shouter({id: group[i].id, onDemand: true});
+			console.log("tried and succeeded to once:", id)
+			new helpers.Shouter({id: id, onDemand: true});
 			//reply("SUCCESS").code(200);
 		} else {
 			console.log("this shouter already exists", shouter);
