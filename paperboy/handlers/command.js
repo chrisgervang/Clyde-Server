@@ -79,11 +79,13 @@ var command = function(request, reply) {
 							var sendCommand = _.find(data.data, {dataType: "sendCommand"});
 							if (sendCommand.dataValue === "once") {
 								new helpers.Shouter({id: group[i].id, onDemand: true});
+								reply("SUCCESS").code(200);
 							} else if (sendCommand.dataValue === "start") {
 								initDevices.find(group[i].id, function(result, err) {
 									if(err === "404") {
 										console.log("tried and succeeded to start:", group[i].id)
 										initDevices.add(new helpers.Shouter({id: group[i].id}));
+										reply("SUCCESS").code(200);
 									}
 								});
 							} else if (sendCommand.dataValue === "stop") {
@@ -92,7 +94,9 @@ var command = function(request, reply) {
 									shouter.destroy();
 									if(err === "404") {
 										console.log("tried and failed to stop:", group[i].id)
+										reply("FAILED").code(200);
 									}
+									reply("SUCCESS").code(200);
 								});
 							}
 							
