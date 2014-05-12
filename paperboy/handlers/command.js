@@ -25,6 +25,18 @@ var _ = require('lodash');
 
 var initDevices = new helpers.Mob();
 
+var onceCheck = function(id) {
+	initDevices.find(id, function(shouter, err) {
+		if(err === "404") {
+			console.log("tried and succeeded to once:", group[i].id)
+			new helpers.Shouter({id: group[i].id, onDemand: true});
+			//reply("SUCCESS").code(200);
+		} else {
+			console.log("this shouter already exists", shouter);
+			//reply("FAILED").code(200);
+		}
+	});
+}
 var command = function(request, reply) {
 	var data = request.payload.command;
 	console.log("DATA", data);
@@ -78,7 +90,17 @@ var command = function(request, reply) {
 						if (data.func === "shouter") {
 							var sendCommand = _.find(data.data, {dataType: "sendCommand"});
 							if (sendCommand.dataValue === "once") {
-								new helpers.Shouter({id: group[i].id, onDemand: true});
+								initDevices.find(group[i].id, function(shouter, err) {
+									if(err === "404") {
+										console.log("tried and succeeded to once:", group[i].id)
+										new helpers.Shouter({id: group[i].id, onDemand: true});
+										reply("SUCCESS").code(200);
+									} else {
+										console.log("this shouter already exists", shouter);
+										reply("FAILED").code(200);
+									}
+								});
+								
 								reply("SUCCESS").code(200);
 							} else if (sendCommand.dataValue === "start") {
 								initDevices.find(group[i].id, function(shouter, err) {
@@ -109,6 +131,7 @@ var command = function(request, reply) {
 							insteonCommand(gw, group[i], data, function(result) {
 								console.log("finished", result);
 								//update firebase with a shouter!
+								onceCheck(deviceDBref.id);
 								//new helpers.Shouter({id: device.id, onDemand: true});
 								successCount++;
 								if (successCount === group.length) {
@@ -136,7 +159,9 @@ var command = function(request, reply) {
 					device.play(function(){
 						successCount++;
 						//update firebase with a shouter!
-						new helpers.Shouter({id: deviceDBref.id, onDemand: true})
+						onceCheck(deviceDBref.id);
+						// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
+						onceCheck(deviceDBref.id);
 						if (successCount === group.length) {
 							reply("SUCCESS").code(200);
 						}
@@ -145,7 +170,8 @@ var command = function(request, reply) {
 					device.pause(function(){
 						successCount++;
 						//update firebase with a shouter!
-						new helpers.Shouter({id: deviceDBref.id, onDemand: true})
+						// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
+						onceCheck(deviceDBref.id);
 						if (successCount === group.length) {
 							reply("SUCCESS").code(200);
 						}
@@ -157,7 +183,8 @@ var command = function(request, reply) {
 						
 						successCount++;
 						//update firebase with a shouter!
-						new helpers.Shouter({id: deviceDBref.id, onDemand: true})
+						// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
+						onceCheck(deviceDBref.id);
 						if (successCount === group.length) {
 							console.log([err, result]);
 							//reply([result, err]).code(200);
@@ -175,7 +202,8 @@ var command = function(request, reply) {
 					device.queueNext(url, function(err, playing) {
 					  	successCount++;
 						//update firebase with a shouter!
-						new helpers.Shouter({id: deviceDBref.id, onDemand: true})
+						// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
+						onceCheck(deviceDBref.id);
 						if (successCount === group.length) {
 							reply("SUCCESS").code(200);
 						}
@@ -184,7 +212,8 @@ var command = function(request, reply) {
 					device.stop(function(){
 						successCount++;
 						//update firebase with a shouter!
-						new helpers.Shouter({id: deviceDBref.id, onDemand: true})
+						// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
+						onceCheck(deviceDBref.id);
 						if (successCount === group.length) {
 							reply("SUCCESS").code(200);
 						}
@@ -193,7 +222,8 @@ var command = function(request, reply) {
 					device.setVolume(data.data.volume, function(){
 						successCount++;
 						//update firebase with a shouter!
-						new helpers.Shouter({id: deviceDBref.id, onDemand: true})
+						// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
+						onceCheck(deviceDBref.id);
 						if (successCount === group.length) {
 							reply("SUCCESS").code(200);
 						}
@@ -203,7 +233,8 @@ var command = function(request, reply) {
 						console.log(result, error);
 						successCount++;
 						//update firebase with a shouter!
-						new helpers.Shouter({id: deviceDBref.id, onDemand: true})
+						// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
+						onceCheck(deviceDBref.id);
 						if (successCount === group.length) {
 							reply("SUCCESS").code(200);
 						}
