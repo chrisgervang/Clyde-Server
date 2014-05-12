@@ -599,7 +599,7 @@ var Shouter = function(config) {
 		//delete this; ... somehow ... pop from Collection Mob?
 	}
 	this.getID = function() {
-
+		return data.id;
 	}
 
 	
@@ -625,10 +625,15 @@ var Mob = function() {
 	this.find = function (id, cb) {
 		var found = 0;
 		for (var i = 0; i < collection.length; i++) {
-			if (collection[i].id === id) {
+			if (!!collection[i].id && collection[i].id === id) {
 				console.log("FOUND");
 				found++;
 				cb(collection[i]);
+			} else if(!!collection[i].getID && collection[i].getID()=== id) {
+				console.log("FOUND");
+				found++;
+				cb(collection[i]);
+
 			}
 		};
 		if (found === 0) {
