@@ -615,18 +615,26 @@ var Mob = function() {
 		return collection;
 	}
 	this.destroy = function(id) {
-		collection.forEach(function(device, index, array){
-			if (device.id === id) {
-				collection = collection.splice(index, 1);
+		for (var i = 0; i < collection.length; i++) {
+			if (!!collection[i].id && collection[i].id === id) {
+				//console.log("FOUND");
+				//found++;
+				collection = collection.splice(i, 1);
 				return collection;
+			} else if(!!collection[i].getID && collection[i].getID()=== id) {
+				console.log("FOUND");
+				//found++;
+				collection = collection.splice(i, 1);
+				return collection;
+
 			}
-		});
+		};
 	}
 	this.find = function (id, cb) {
 		var found = 0;
 		for (var i = 0; i < collection.length; i++) {
 			if (!!collection[i].id && collection[i].id === id) {
-				console.log("FOUND");
+				//console.log("FOUND");
 				found++;
 				cb(collection[i]);
 			} else if(!!collection[i].getID && collection[i].getID()=== id) {

@@ -96,6 +96,7 @@ var command = function(request, reply) {
 									}
 									console.log("found shouter", shouter);
 									shouter.destroy();
+									initDevices.destroy(group[i].id);
 									reply("SUCCESS").code(200);
 								});
 							}
