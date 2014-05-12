@@ -81,7 +81,7 @@ var command = function(request, reply) {
 								new helpers.Shouter({id: group[i].id, onDemand: true});
 								reply("SUCCESS").code(200);
 							} else if (sendCommand.dataValue === "start") {
-								initDevices.find(group[i].id, function(result, err) {
+								initDevices.find(group[i].id, function(shouter, err) {
 									if(err === "404") {
 										console.log("tried and succeeded to start:", group[i].id)
 										initDevices.add(new helpers.Shouter({id: group[i].id}));

@@ -625,6 +625,7 @@ var Mob = function() {
 				console.log("DESTROY");
 				//found++;
 				collection = collection.splice(i, 1);
+				console.log("AFTER DESTROY", collection);
 				return collection;
 
 			}
