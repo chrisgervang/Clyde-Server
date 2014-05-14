@@ -77,7 +77,7 @@ var command = function(request, reply) {
 				}
 			}
 		}
-		//console.log("HERES UR BATCH", group);
+		console.log("HERES UR BATCH", group);
 		
 		if (group[0].designRef === 'insteonLightSwitch') {
 			//var Insteon = require('../../../home-controller').Insteon;
@@ -144,7 +144,6 @@ var command = function(request, reply) {
 		} else if(group[0].designRef === 'sonosSpeaker') {
 			var successCount = 0;
 			for (var i = 0; i < group.length; i++) {
-				var device = new sonos.Sonos(group[i].settings.ip, group[i].settings.port);
 				// var SonosDiscovery = require('sonos-discovery');
 				// var discovery = new SonosDiscovery();
 				// console.log("DISCOVERY",discovery);
@@ -152,13 +151,20 @@ var command = function(request, reply) {
 				// 	console.log("DISCOVERY",discovery);
 				// },2000);
 				//for scope sake!
+
+
+				//ASYNC FOR GOODNESS SAKE. by the time group[i].id comes around - it's already moved onto i === poop.
+
+				//instead try putting all the commands in a function.
+				var deviceRef = _.extend(group[i]);
+
 				if (data.func === "shouter") {
 					var sendCommand = _.find(data.data, {label: "sendCommand"});
 					if (sendCommand.data === "once") {
-						initDevices.find(group[i].id, function(shouter, err) {
+						initDevices.find(deviceRef.id, function(shouter, err) {
 							if(err === "404") {
-								console.log("tried and succeeded to once:", group[i].id)
-								new helpers.Shouter({id: group[i].id, onDemand: true});
+								console.log("tried and succeeded to once:", deviceRef.id)
+								new helpers.Shouter({id: deviceRef.id, onDemand: true});
 								reply("SUCCESS").code(200);
 							} else {
 								console.log("this shouter already exists", shouter);
@@ -168,142 +174,41 @@ var command = function(request, reply) {
 						
 						reply("SUCCESS").code(200);
 					} else if (sendCommand.data === "start") {
-						initDevices.find(group[i].id, function(shouter, err) {
+						initDevices.find(deviceRef.id, function(shouter, err) {
 							if(err === "404") {
-								console.log("tried and succeeded to start:", group[i].id)
-								initDevices.add(new helpers.Shouter({id: group[i].id}));
+								console.log("tried and succeeded to start:", deviceRef.id)
+								initDevices.add(new helpers.Shouter({id: deviceRef.id}));
 								reply("SUCCESS").code(200);
 							} else {
 								console.log("this shouter already exists", shouter);
 							}
 						});
 					} else if (sendCommand.data === "stop") {
-						initDevices.find(group[i].id, function(shouter, err) {
+						initDevices.find(deviceRef.id, function(shouter, err) {
 							if(err === "404") {
-								console.log("tried and failed to stop:", group[i].id)
+								console.log("tried and failed to stop:", deviceRef.id)
 								reply("FAILED").code(200);
 							}
 							console.log("found shouter", shouter);
-							initDevices.destroy(group[i].id);
+							initDevices.destroy(deviceRef.id);
 							shouter.destroy();
 							reply("SUCCESS").code(200);
 						});
 					}
 					
 				} else {
-					var deviceDBref = group[i];
-					if(data.func === 'speakerState') {
-						var setSpeakerPlayPause = _.find(data.data, {label: "setSpeakerPlayPause"});
-						if (setSpeakerPlayPause.data === 'play') {
-							device.play(function(){
-								successCount++;
-								//update firebase with a shouter!
-								// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
-								onceCheck(deviceDBref.id);
-								if (successCount === group.length) {
-									reply("SUCCESS PLAY").code(200);
-								}
-							});
-						} else if (setSpeakerPlayPause.data === 'pause') {
-							device.pause(function(){
-								successCount++;
-								//update firebase with a shouter!
-								// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
-								onceCheck(deviceDBref.id);
-								if (successCount === group.length) {
-									reply("SUCCESS PAUSE").code(200);
-								}
-							});
-						}
-					} else if(data.func === 'playPlaylist') {
-						var setSpeakerPlaylist = _.find(data.data, {label: "setSpeakerPlaylist"});
-						var name = setSpeakerPlaylist.data;
-						var deviceDBref = group[i];
-						var uri = _.find(deviceDBref.state.playlists, {title: name}).uri;
-						console.log("NAME", name, "URI", uri);
-
-						device.queuePlaylist(name, uri , function(err, result){
-							if (!!err) {
-								console.log([err, result]);
-								reply([result, err]).code(500);
-							} else {
-								device.seek('track', parseInt(result[0].FirstTrackNumberEnqueued[0]), function(err, result){
-									device.play(function(err, result){
-										successCount++;
-										//update firebase with a shouter!
-										// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
-										onceCheck(deviceDBref.id);
-										if (successCount === group.length) {
-											console.log([err, result]);
-											reply([result, err]).code(200);
-										}	
-									});
-								});
-							}
-							
-						});
-					} else if(data.func === 'getPlaylists') {
-						device.getMusicLibrary('playlists', {start: '0', total: '100'},function(err, result){
-							successCount++;
-							//update firebase with a shouter!
-							// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
-							onceCheck(deviceDBref.id);
-							if (successCount === group.length) {
-								console.log(result.items);
-								reply(result.items).code(200);
-							}	
+					sonosCommand(group[i], data, function (result) {
+						// body...
+						successCount++;
+						//update firebase with a shouter!
+						// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
 						
-						});
-					} else if(data.func === 'speakerTextToSpeech') {
-						//Replace all spaces with a _ because Sonos doesn't support spaces
-						var setInputText = _.find(data.data, {label: "setInputText"})
-						var text = setInputText.data.replace(/ /g,'_');
-
-						//For supported languages see www.voicerss.org/api/documentation.aspx
-						//This url just redirects to voicerss because of the specific url format for the sonos
-						var url = 'http://i872953.iris.fhict.nl/speech/en-uk_' + encodeURIComponent(text)+'.mp3';
-						console.log(url);
-						device.queueNext(url, function(err, playing) {
-						  	successCount++;
-							//update firebase with a shouter!
-							// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
-							onceCheck(deviceDBref.id);
-							if (successCount === group.length) {
-								reply("SUCCESS").code(200);
-							}
-						});
-					} else if(data.func === 'stop') {
-						device.stop(function(){
-							successCount++;
-							//update firebase with a shouter!
-							// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
-							onceCheck(deviceDBref.id);
-							if (successCount === group.length) {
-								reply("SUCCESS").code(200);
-							}
-						});
-					} else if(data.func === 'setVolume') {
-						device.setVolume(data.data.volume, function(){
-							successCount++;
-							//update firebase with a shouter!
-							// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
-							onceCheck(deviceDBref.id);
-							if (successCount === group.length) {
-								reply("SUCCESS").code(200);
-							}
-						});
-					} else if(data.func === 'queueSpotify') {
-						device.queueSpotify(data.data.uri, function(result, error){
-							console.log(result, error);
-							successCount++;
-							//update firebase with a shouter!
-							// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
-							onceCheck(deviceDBref.id);
-							if (successCount === group.length) {
-								reply("SUCCESS").code(200);
-							}
-						})
-					}
+						if (successCount === group.length) {
+							console.log(result);
+							reply("SUCCESS SONOS").code(200);
+						}	
+					});
+					
 				}
 				
 			};
@@ -318,7 +223,7 @@ var command = function(request, reply) {
 			if(!!devices[data.id]){
 				var device = devices[data.id];
 				console.log("FOUND DEVICE", devices[data.id]);
-				console.log("BIG DATA!", group[i]);
+				console.log("BIG DATA!", deviceRef);
 				//insteon
 				if (device.designRef === 'insteonLightSwitch') {
 					var Insteon = require('home-controller').Insteon;
@@ -339,6 +244,124 @@ var command = function(request, reply) {
 		})
 	}*/
 
+}
+
+var sonosCommand = function (deviceRef, data, cb) {
+	var device = new sonos.Sonos(deviceRef.settings.ip, deviceRef.settings.port);
+	console.log("FUCKING SONOS", device);
+	var deviceDBref = _.extend(deviceRef);
+
+	if(data.func === 'speakerState') {
+		var setSpeakerPlayPause = _.find(data.data, {label: "setSpeakerPlayPause"});
+		if (setSpeakerPlayPause.data === 'play') {
+			console.log("HMMMMM_1", deviceDBref.id);
+			device.play(function(err, result){
+				if (!err) {
+					console.log("HMMMMM_2", deviceDBref.id);
+					onceCheck(deviceDBref.id);
+					cb(result);
+				} else {
+					console.log(err);
+				}
+			});
+		} else if (setSpeakerPlayPause.data === 'pause') {
+			device.pause(function(err, result){
+				if (!err) {
+					//console.log("HMMMMM_2", deviceDBref.id);
+					onceCheck(deviceDBref.id);
+					cb(result);
+				} else {
+					console.log(err);
+				}
+			});
+		}
+	} else if(data.func === 'playPlaylist') {
+		var setSpeakerPlaylist = _.find(data.data, {label: "setSpeakerPlaylist"});
+		var name = setSpeakerPlaylist.data;
+		var deviceDBref = deviceRef;
+		var uri = _.find(deviceDBref.state.playlists, {title: name}).uri;
+		console.log("NAME", name, "URI", uri);
+
+		device.queuePlaylist(name, uri , function(err, result){
+			if (!!err) {
+				console.log([err, result]);
+				reply([result, err]).code(500);
+			} else {
+				device.seek('track', parseInt(result[0].FirstTrackNumberEnqueued[0]), function(err, result){
+					device.play(function(err, result){
+						if (!err) {
+							//console.log("HMMMMM_2", deviceDBref.id);
+							onceCheck(deviceDBref.id);
+							cb(result);
+						} else {
+							console.log(err);
+						}
+					});
+				});
+			}
+			
+		});
+	} else if(data.func === 'getPlaylists') {
+		device.getMusicLibrary('playlists', {start: '0', total: '100'},function(err, result){
+			if (!err) {
+				//console.log("HMMMMM_2", deviceDBref.id);
+				onceCheck(deviceDBref.id);
+				cb(result);
+			} else {
+				console.log(err);
+			}
+		
+		});
+	} else if(data.func === 'speakerTextToSpeech') {
+		//Replace all spaces with a _ because Sonos doesn't support spaces
+		var setInputText = _.find(data.data, {label: "setInputText"})
+		var text = setInputText.data.replace(/ /g,'_');
+
+		//For supported languages see www.voicerss.org/api/documentation.aspx
+		//This url just redirects to voicerss because of the specific url format for the sonos
+		var url = 'http://i872953.iris.fhict.nl/speech/en-uk_' + encodeURIComponent(text)+'.mp3';
+		console.log(url);
+		device.queueNext(url, function(err, playing) {
+		  	successCount++;
+			//update firebase with a shouter!
+			// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
+			onceCheck(deviceDBref.id);
+			if (successCount === group.length) {
+				reply("SUCCESS").code(200);
+			}
+		});
+	} else if(data.func === 'stop') {
+		device.stop(function(){
+			successCount++;
+			//update firebase with a shouter!
+			// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
+			onceCheck(deviceDBref.id);
+			if (successCount === group.length) {
+				reply("SUCCESS").code(200);
+			}
+		});
+	} else if(data.func === 'setVolume') {
+		device.setVolume(data.data.volume, function(){
+			successCount++;
+			//update firebase with a shouter!
+			// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
+			onceCheck(deviceDBref.id);
+			if (successCount === group.length) {
+				reply("SUCCESS").code(200);
+			}
+		});
+	} else if(data.func === 'queueSpotify') {
+		device.queueSpotify(data.data.uri, function(result, error){
+			console.log(result, error);
+			successCount++;
+			//update firebase with a shouter!
+			// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
+			onceCheck(deviceDBref.id);
+			if (successCount === group.length) {
+				reply("SUCCESS").code(200);
+			}
+		})
+	}
 }
 
 //insteon
