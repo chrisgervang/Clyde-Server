@@ -135,6 +135,7 @@ var Shouter = function(config) {
 			client.on('DeviceAvailable', function(device, model) {
 			  device.deviceDescription(function(err, details){
 			  	console.log("SONOS",details);
+			  	console.log("DATATATA",data);
 			  	if (details.serialNum === data.settings.serialNum && data.settings.UDN === "_temp") {
 			  		console.log("SONOS",device);
 			  		data.settings.ip = device.host;
