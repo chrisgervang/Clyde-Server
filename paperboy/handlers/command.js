@@ -88,8 +88,8 @@ var command = function(request, reply) {
 				for (var i = 0; i < group.length; i++) {
 					if (!!group[i].settings.devID) {
 						if (data.func === "shouter") {
-							var sendCommand = _.find(data.data, {dataType: "sendCommand"});
-							if (sendCommand.dataValue === "once") {
+							var sendCommand = _.find(data.data, {label: "sendCommand"});
+							if (sendCommand.data === "once") {
 								initDevices.find(group[i].id, function(shouter, err) {
 									if(err === "404") {
 										console.log("tried and succeeded to once:", group[i].id)
@@ -101,7 +101,7 @@ var command = function(request, reply) {
 									}
 								});
 								reply("SUCCESS").code(200);
-							} else if (sendCommand.dataValue === "start") {
+							} else if (sendCommand.data === "start") {
 								initDevices.find(group[i].id, function(shouter, err) {
 									if(err === "404") {
 										console.log("tried and succeeded to start:", group[i].id)
@@ -111,7 +111,7 @@ var command = function(request, reply) {
 										console.log("this shouter already exists", shouter);
 									}
 								});
-							} else if (sendCommand.dataValue === "stop") {
+							} else if (sendCommand.data === "stop") {
 								initDevices.find(group[i].id, function(shouter, err) {
 									if(err === "404") {
 										console.log("tried and failed to stop:", group[i].id)
@@ -153,8 +153,8 @@ var command = function(request, reply) {
 				// },2000);
 				//for scope sake!
 				if (data.func === "shouter") {
-					var sendCommand = _.find(data.data, {dataType: "sendCommand"});
-					if (sendCommand.dataValue === "once") {
+					var sendCommand = _.find(data.data, {label: "sendCommand"});
+					if (sendCommand.data === "once") {
 						initDevices.find(group[i].id, function(shouter, err) {
 							if(err === "404") {
 								console.log("tried and succeeded to once:", group[i].id)
@@ -167,7 +167,7 @@ var command = function(request, reply) {
 						});
 						
 						reply("SUCCESS").code(200);
-					} else if (sendCommand.dataValue === "start") {
+					} else if (sendCommand.data === "start") {
 						initDevices.find(group[i].id, function(shouter, err) {
 							if(err === "404") {
 								console.log("tried and succeeded to start:", group[i].id)
@@ -177,7 +177,7 @@ var command = function(request, reply) {
 								console.log("this shouter already exists", shouter);
 							}
 						});
-					} else if (sendCommand.dataValue === "stop") {
+					} else if (sendCommand.data === "stop") {
 						initDevices.find(group[i].id, function(shouter, err) {
 							if(err === "404") {
 								console.log("tried and failed to stop:", group[i].id)
@@ -193,7 +193,7 @@ var command = function(request, reply) {
 				} else {
 					var deviceDBref = group[i];
 					if(data.func === 'speakerState') {
-						var setSpeakerPlayPause = _.find(data.data, {dataType: "setSpeakerPlayPause"});
+						var setSpeakerPlayPause = _.find(data.data, {label: "setSpeakerPlayPause"});
 						if (setSpeakerPlayPause.data === 'play') {
 							device.play(function(){
 								successCount++;
@@ -216,8 +216,8 @@ var command = function(request, reply) {
 							});
 						}
 					} else if(data.func === 'playPlaylist') {
-						var setSpeakerPlaylist = _.find(data.data, {dataType: "setSpeakerPlaylist"});
-						var name = setSpeakerPlaylist.dataValue;
+						var setSpeakerPlaylist = _.find(data.data, {label: "setSpeakerPlaylist"});
+						var name = setSpeakerPlaylist.data;
 						var deviceDBref = group[i];
 						var uri = _.find(deviceDBref.state.playlists, {title: name}).uri;
 						console.log("NAME", name, "URI", uri);
@@ -256,8 +256,8 @@ var command = function(request, reply) {
 						});
 					} else if(data.func === 'speakerTextToSpeech') {
 						//Replace all spaces with a _ because Sonos doesn't support spaces
-						var setInputText = _.find(data.data, {dataType: "setInputText"})
-						var text = setInputText.dataValue.replace(/ /g,'_');
+						var setInputText = _.find(data.data, {label: "setInputText"})
+						var text = setInputText.data.replace(/ /g,'_');
 
 						//For supported languages see www.voicerss.org/api/documentation.aspx
 						//This url just redirects to voicerss because of the specific url format for the sonos
@@ -362,8 +362,8 @@ var insteonCommand = function(gw, device, data, cb) {
 
 			});
 		} else if (data.func === "lightSwitchState") {
-			var setIfBoolean = _.find(data.data, {dataType: "setIfBoolean"});
-			if (setIfBoolean.dataValue === true) {
+			var setIfBoolean = _.find(data.data, {label: "setIfBoolean"});
+			if (setIfBoolean.data === true) {
 				gw.turnOnFast(device.settings.devID, function(result, error) {
 					//console.log(error, result);
 	
@@ -371,7 +371,7 @@ var insteonCommand = function(gw, device, data, cb) {
 					cb(result);
 
 				});
-			} else if (setIfBoolean.dataValue === false) {
+			} else if (setIfBoolean.data === false) {
 				gw.turnOffFast(device.settings.devID, function(result, error) {
 					//console.log(error, result);
 	
@@ -381,16 +381,16 @@ var insteonCommand = function(gw, device, data, cb) {
 				});
 			}
 		} else if (data.func === "lightSwitchBrightness") {
-            var setPercent100 = _.find(data.data, {dataType: "setPercent100"});
-            console.log("SOME DATA TEST:", setPercent100.dataValue);
+            var setPercent100 = _.find(data.data, {label: "setPercent100"});
+            console.log("SOME DATA TEST:", setPercent100.data);
 
-			if (setPercent100.dataValue === 0) {
+			if (setPercent100.data === 0) {
 				gw.turnOff(device.settings.devID, 1000 , function(result, error) {
 					console.timeEnd("light");
 					cb(result);
 				});
 			} else {
-                gw.turnOn(device.settings.devID, setPercent100.dataValue, 1000, function(result, error) {
+                gw.turnOn(device.settings.devID, setPercent100.data, 1000, function(result, error) {
                         //console.log(error, result);
                         console.timeEnd("light");
                         cb(result);
