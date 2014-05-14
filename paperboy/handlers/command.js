@@ -201,7 +201,7 @@ var command = function(request, reply) {
 								// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
 								onceCheck(deviceDBref.id);
 								if (successCount === group.length) {
-									reply("SUCCESS").code(200);
+									reply("SUCCESS PLAY").code(200);
 								}
 							});
 						} else if (setSpeakerPlayPause.data === 'pause') {
@@ -211,7 +211,7 @@ var command = function(request, reply) {
 								// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
 								onceCheck(deviceDBref.id);
 								if (successCount === group.length) {
-									reply("SUCCESS").code(200);
+									reply("SUCCESS PAUSE").code(200);
 								}
 							});
 						}
