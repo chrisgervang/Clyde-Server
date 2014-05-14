@@ -1,6 +1,6 @@
 var Firebase = require('firebase');
-var clydedevices = new Firebase('https://clydedev.firebaseio.com/devices/');
-var deviceDesignDB = new Firebase('https://clydedev.firebaseio.com/deviceDesigns/');
+var clydedevices = new Firebase('https://clydematt.firebaseio.com/devices/');
+var deviceDesignDB = new Firebase('https://clydematt.firebaseio.com/deviceDesigns/');
 var _ = require('lodash');
 var db = require('./db');
 
@@ -83,7 +83,7 @@ var Shouter = function(config) {
 	
 	data.id = config.id;
 	var that = this;
-	var device = new Firebase('https://clydedev.firebaseio.com/devices/'+data.id);
+	var device = new Firebase('https://clydematt.firebaseio.com/devices/'+data.id);
 	device.once("value", function(result){
 		
 		data = result.val();
@@ -147,7 +147,7 @@ var Shouter = function(config) {
 			  		console.log("SHIP",that,data);
 					//Sculley: New Connection
 					//Firebase: Post up the new device for the User
-					new Firebase("https://clydedev.firebaseio.com/devices/" + data.id).update({settings: data.settings})
+					new Firebase("https://clydematt.firebaseio.com/devices/" + data.id).update({settings: data.settings})
 					that.init();
 			  	} else if (details.serialNum === data.settings.serialNum) {
 			  		console.log("SONOS",device);
@@ -177,7 +177,7 @@ var Shouter = function(config) {
 						successCount++;
 						console.log("successCount", successCount);
 						if (successCount === 2) {
-							new Firebase("https://clydedev.firebaseio.com/devices/" + data.id).update({settings: data.settings})
+							new Firebase("https://clydematt.firebaseio.com/devices/" + data.id).update({settings: data.settings})
 							//data.local.gw.close();
 							that.init();
 						}
@@ -188,7 +188,7 @@ var Shouter = function(config) {
 						successCount++;
 						console.log("successCount", successCount);
 						if (successCount === 2) {
-							new Firebase("https://clydedev.firebaseio.com/devices/" + data.id).update({settings: data.settings})
+							new Firebase("https://clydematt.firebaseio.com/devices/" + data.id).update({settings: data.settings})
 							//data.local.gw.close();
 							that.init();
 						}
@@ -281,7 +281,7 @@ var Shouter = function(config) {
 							console.log("INSTEON LIGHT SWITCH CHANGE: ONLINE.", result.online);
 							data.state.online = (result.online ? true : false);
 							//Firebase: Post up the device... maybe Catcher event!
-							new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({online: data.state.online})
+							new Firebase("https://clydematt.firebaseio.com/devices/" + data.id + "/state/").update({online: data.state.online})
 						}
 						//light on (when level < 3 it is off)
 						if (data.state.on !== result.on) {
@@ -289,7 +289,7 @@ var Shouter = function(config) {
 							console.log("INSTEON LIGHT SWITCH CHANGE: on.", result.on);
 							data.state.on = (result.on ? true : false);
 							//Firebase: Post up the device... maybe Catcher event!
-							new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({on: data.state.on})
+							new Firebase("https://clydematt.firebaseio.com/devices/" + data.id + "/state/").update({on: data.state.on})
 						}
 						
 						//light level (keeps track of level)
@@ -299,7 +299,7 @@ var Shouter = function(config) {
 							data.state.level = result.level;
 							//Firebase: Post up the device... maybe Catcher event!
 							if (!!data.state.level || data.state.level === 0) {
-								new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({level: data.state.level})
+								new Firebase("https://clydematt.firebaseio.com/devices/" + data.id + "/state/").update({level: data.state.level})
 							} else {
 								console.log("Something went wrong with level:", data.state.level)
 							}
@@ -311,7 +311,7 @@ var Shouter = function(config) {
 							console.log("INSTEON LIGHT SWITCH CHANGE: rampRate.", result.rampRate);
 							data.state.rampRate = result.rampRate;
 							//Firebase: Post up the device... maybe Catcher event!
-							new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/settings/").update({rampRate: data.state.rampRate})
+							new Firebase("https://clydematt.firebaseio.com/devices/" + data.id + "/settings/").update({rampRate: data.state.rampRate})
 						}
 						//onLevel
 						if (data.state.onLevel !== result.onLevel) {
@@ -319,7 +319,7 @@ var Shouter = function(config) {
 							console.log("INSTEON LIGHT SWITCH CHANGE: onLevel.", result.onLevel);
 							data.state.onLevel = result.onLevel;
 							//Firebase: Post up the device... maybe Catcher event!
-							new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/settings/").update({onLevel: data.state.onLevel})
+							new Firebase("https://clydematt.firebaseio.com/devices/" + data.id + "/settings/").update({onLevel: data.state.onLevel})
 						}
 						//only run shouter once!!!
 
@@ -348,7 +348,7 @@ var Shouter = function(config) {
 								console.log("SONOS CHANGE: ONLINE.", result.online);
 								data.state.online = (result.online ? true : false);
 								//Firebase: Post up the device... maybe Catcher event!
-								new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({online: data.state.online})
+								new Firebase("https://clydematt.firebaseio.com/devices/" + data.id + "/state/").update({online: data.state.online})
 							}
 							//is this device playing
 							if (data.state.playing !== result.playing && !!result.playing) {
@@ -356,7 +356,7 @@ var Shouter = function(config) {
 								console.log("SONOS CHANGE: PLAYING.", result.playing);
 								data.state.playing = result.playing;
 								//Firebase: Post up the device... maybe Catcher event!
-								new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({playing: data.state.playing})
+								new Firebase("https://clydematt.firebaseio.com/devices/" + data.id + "/state/").update({playing: data.state.playing})
 							}
 							//the play queue
 							if (data.state.queue === "_temp" || _.difference(data.state.queue, result.queue).length !== 0) {
@@ -364,7 +364,7 @@ var Shouter = function(config) {
 								console.log("SONOS CHANGE: QUEUE.", result.queue);
 								data.state.queue = result.queue;
 								//Firebase: Post up the device... maybe Catcher event!
-								new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({queue: data.state.queue})
+								new Firebase("https://clydematt.firebaseio.com/devices/" + data.id + "/state/").update({queue: data.state.queue})
 							}
 							//current playing song
 							if (!data.state.song || data.state.song.artist !== result.song.artist || data.state.song.title !== result.song.title || data.state.song.album !== result.song.album) {
@@ -372,7 +372,7 @@ var Shouter = function(config) {
 								console.log("SONOS CHANGE: SONG.", result.song);
 								data.state.song = result.song;
 								//Firebase: Post up the device... maybe Catcher event!
-								new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({song: data.state.song})
+								new Firebase("https://clydematt.firebaseio.com/devices/" + data.id + "/state/").update({song: data.state.song})
 							}
 							//the current volume
 							if (data.state.volume !== result.volume) {
@@ -380,14 +380,14 @@ var Shouter = function(config) {
 								console.log("SONOS CHANGE: VOLUME.", result.volume);
 								data.state.volume = result.volume;
 								//Firebase: Post up the device... maybe Catcher event!
-								new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({volume: data.state.volume})
+								new Firebase("https://clydematt.firebaseio.com/devices/" + data.id + "/state/").update({volume: data.state.volume})
 							}
 							if (!_.isEqual(data.state.playlists,result.playlists)) {
 								// Sculley: data change
 								console.log("SONOS CHANGE: PLAYLISTS.", result.playlists);
 								data.state.playlists = result.playlists;
 								//Firebase: Post up the device... maybe Catcher event!
-								new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({playlists: data.state.playlists})
+								new Firebase("https://clydematt.firebaseio.com/devices/" + data.id + "/state/").update({playlists: data.state.playlists})
 							};
 							//only run shouter once!!!
 							
@@ -404,7 +404,7 @@ var Shouter = function(config) {
 			}, data.settings.pollRate);
 			//console.log(data.settings.process)
 
-			var processDB = new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/settings/");
+			var processDB = new Firebase("https://clydematt.firebaseio.com/devices/" + data.id + "/settings/");
 			processDB.update({pollRate: data.settings.pollRate});
 		} else if (data.designRef === "Pebble") {
 
@@ -592,7 +592,7 @@ var Shouter = function(config) {
 							if (!!result) {
 								state.playing = result;
 							};
-							device.getMusicLibrary('playlists', {start: '0', total: '100'},function(err, result){
+							device.getMusicLibrary('playlists', {start: '0', total: '100'}, function(err, result){
 								if (!!result) {
 									//console.log(result);
 									state.playlists = result.items;
