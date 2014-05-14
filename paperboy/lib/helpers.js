@@ -134,7 +134,7 @@ var Shouter = function(config) {
 			var client = sonos.search();
 			client.on('DeviceAvailable', function(device, model) {
 			  device.deviceDescription(function(err, details){
-			  	//console.log("SONOS",details);
+			  	console.log("SONOS",details);
 			  	if (details.serialNum === data.settings.serialNum && data.settings.UDN === "_temp") {
 			  		console.log("SONOS",device);
 			  		data.settings.ip = device.host;
