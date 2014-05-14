@@ -404,8 +404,8 @@ var Shouter = function(config) {
 			}, data.settings.pollRate);
 			//console.log(data.settings.process)
 
-			var processDB = new Firebase("https://clydematt.firebaseio.com/devices/" + data.id + "/settings/");
-			processDB.update({pollRate: data.settings.pollRate});
+			// var processDB = new Firebase("https://clydematt.firebaseio.com/devices/" + data.id + "/settings/");
+			// processDB.update({pollRate: data.settings.pollRate});
 		} else if (data.designRef === "Pebble") {
 
 		}
@@ -582,7 +582,7 @@ var Shouter = function(config) {
 			state.online = true;
 			//current data
 			device.currentTrack(function(err, result){
-				//console.log("SONOS TRACK\n", result);
+				console.log("SONOS TRACK\n", result);
 				state.song = result;
 				//volume
 				device.getVolume(function(err, result){
