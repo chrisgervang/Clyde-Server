@@ -100,7 +100,6 @@ var command = function(request, reply) {
 										reply("FAILED").code(200);
 									}
 								});
-								
 								reply("SUCCESS").code(200);
 							} else if (sendCommand.dataValue === "start") {
 								initDevices.find(group[i].id, function(shouter, err) {
@@ -124,7 +123,6 @@ var command = function(request, reply) {
 									reply("SUCCESS").code(200);
 								});
 							}
-							
 						} else {
 							var device = group[i];
 							console.log("insteonLightSwitch COMMAND", group[i].settings.devID, group[i].settings.hubId)
@@ -147,99 +145,167 @@ var command = function(request, reply) {
 			var successCount = 0;
 			for (var i = 0; i < group.length; i++) {
 				var device = new sonos.Sonos(group[i].settings.ip, group[i].settings.port);
-				var SonosDiscovery = require('sonos-discovery');
-				var discovery = new SonosDiscovery();
-				console.log("DISCOVERY",discovery);
-				setTimeout(function(){
-					console.log("DISCOVERY",discovery);
-				},2000);
+				// var SonosDiscovery = require('sonos-discovery');
+				// var discovery = new SonosDiscovery();
+				// console.log("DISCOVERY",discovery);
+				// setTimeout(function(){
+				// 	console.log("DISCOVERY",discovery);
+				// },2000);
 				//for scope sake!
-				var deviceDBref = group[i];
-				if (data.func === 'play') {
-					device.play(function(){
-						successCount++;
-						//update firebase with a shouter!
-						onceCheck(deviceDBref.id);
-						// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
-						onceCheck(deviceDBref.id);
-						if (successCount === group.length) {
-							reply("SUCCESS").code(200);
-						}
-					});
-				} else if(data.func === 'pause') {
-					device.pause(function(){
-						successCount++;
-						//update firebase with a shouter!
-						// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
-						onceCheck(deviceDBref.id);
-						if (successCount === group.length) {
-							reply("SUCCESS").code(200);
-						}
-					});
-				} else if(data.func === 'playlists') {
-					
-
-					device.getMusicLibrary('playlists', {start: 0, total: 25}, function(err, result){
+				if (data.func === "shouter") {
+					var sendCommand = _.find(data.data, {dataType: "sendCommand"});
+					if (sendCommand.dataValue === "once") {
+						initDevices.find(group[i].id, function(shouter, err) {
+							if(err === "404") {
+								console.log("tried and succeeded to once:", group[i].id)
+								new helpers.Shouter({id: group[i].id, onDemand: true});
+								reply("SUCCESS").code(200);
+							} else {
+								console.log("this shouter already exists", shouter);
+								reply("FAILED").code(200);
+							}
+						});
 						
-						successCount++;
-						//update firebase with a shouter!
-						// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
-						onceCheck(deviceDBref.id);
-						if (successCount === group.length) {
-							console.log([err, result]);
-							//reply([result, err]).code(200);
+						reply("SUCCESS").code(200);
+					} else if (sendCommand.dataValue === "start") {
+						initDevices.find(group[i].id, function(shouter, err) {
+							if(err === "404") {
+								console.log("tried and succeeded to start:", group[i].id)
+								initDevices.add(new helpers.Shouter({id: group[i].id}));
+								reply("SUCCESS").code(200);
+							} else {
+								console.log("this shouter already exists", shouter);
+							}
+						});
+					} else if (sendCommand.dataValue === "stop") {
+						initDevices.find(group[i].id, function(shouter, err) {
+							if(err === "404") {
+								console.log("tried and failed to stop:", group[i].id)
+								reply("FAILED").code(200);
+							}
+							console.log("found shouter", shouter);
+							initDevices.destroy(group[i].id);
+							shouter.destroy();
+							reply("SUCCESS").code(200);
+						});
+					}
+					
+				} else {
+					var deviceDBref = group[i];
+					if(data.func === 'speakerState') {
+						var setSpeakerPlayPause = _.find(data.data, {dataType: "setSpeakerPlayPause"});
+						if (setSpeakerPlayPause.data === 'play') {
+							device.play(function(){
+								successCount++;
+								//update firebase with a shouter!
+								// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
+								onceCheck(deviceDBref.id);
+								if (successCount === group.length) {
+									reply("SUCCESS").code(200);
+								}
+							});
+						} else if (setSpeakerPlayPause.data === 'pause') {
+							device.pause(function(){
+								successCount++;
+								//update firebase with a shouter!
+								// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
+								onceCheck(deviceDBref.id);
+								if (successCount === group.length) {
+									reply("SUCCESS").code(200);
+								}
+							});
 						}
-					});
-				} else if(data.func === 'speakerTextToSpeech') {
-					//Replace all spaces with a _ because Sonos doesn't support spaces
-					var setInputText = _.find(data.data, {dataType: "setInputText"})
-					var text = setInputText.dataValue.replace(/ /g,'_');
+					} else if(data.func === 'playPlaylist') {
+						var setSpeakerPlaylist = _.find(data.data, {dataType: "setSpeakerPlaylist"});
+						var name = setSpeakerPlaylist.dataValue;
+						var deviceDBref = group[i];
+						var uri = _.find(deviceDBref.state.playlists, {title: name}).uri;
+						console.log("NAME", name, "URI", uri);
 
-					//For supported languages see www.voicerss.org/api/documentation.aspx
-					//This url just redirects to voicerss because of the specific url format for the sonos
-					var url = 'http://i872953.iris.fhict.nl/speech/en-uk_' + encodeURIComponent(text)+'.mp3';
-					console.log(url);
-					device.queueNext(url, function(err, playing) {
-					  	successCount++;
-						//update firebase with a shouter!
-						// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
-						onceCheck(deviceDBref.id);
-						if (successCount === group.length) {
-							reply("SUCCESS").code(200);
-						}
-					});
-				} else if(data.func === 'stop') {
-					device.stop(function(){
-						successCount++;
-						//update firebase with a shouter!
-						// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
-						onceCheck(deviceDBref.id);
-						if (successCount === group.length) {
-							reply("SUCCESS").code(200);
-						}
-					});
-				} else if(data.func === 'setVolume') {
-					device.setVolume(data.data.volume, function(){
-						successCount++;
-						//update firebase with a shouter!
-						// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
-						onceCheck(deviceDBref.id);
-						if (successCount === group.length) {
-							reply("SUCCESS").code(200);
-						}
-					});
-				} else if(data.func === 'queueSpotify') {
-					device.queueSpotify(data.data.uri, function(result, error){
-						console.log(result, error);
-						successCount++;
-						//update firebase with a shouter!
-						// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
-						onceCheck(deviceDBref.id);
-						if (successCount === group.length) {
-							reply("SUCCESS").code(200);
-						}
-					})
+						device.queuePlaylist(name, uri , function(err, result){
+							if (!!err) {
+								console.log([err, result]);
+								reply([result, err]).code(500);
+							} else {
+								device.seek('track', parseInt(result[0].FirstTrackNumberEnqueued[0]), function(err, result){
+									device.play(function(err, result){
+										successCount++;
+										//update firebase with a shouter!
+										// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
+										onceCheck(deviceDBref.id);
+										if (successCount === group.length) {
+											console.log([err, result]);
+											reply([result, err]).code(200);
+										}	
+									});
+								});
+							}
+							
+						});
+					} else if(data.func === 'getPlaylists') {
+						device.getMusicLibrary('playlists', {start: '0', total: '100'},function(err, result){
+							successCount++;
+							//update firebase with a shouter!
+							// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
+							onceCheck(deviceDBref.id);
+							if (successCount === group.length) {
+								console.log(result.items);
+								reply(result.items).code(200);
+							}	
+						
+						});
+					} else if(data.func === 'speakerTextToSpeech') {
+						//Replace all spaces with a _ because Sonos doesn't support spaces
+						var setInputText = _.find(data.data, {dataType: "setInputText"})
+						var text = setInputText.dataValue.replace(/ /g,'_');
+
+						//For supported languages see www.voicerss.org/api/documentation.aspx
+						//This url just redirects to voicerss because of the specific url format for the sonos
+						var url = 'http://i872953.iris.fhict.nl/speech/en-uk_' + encodeURIComponent(text)+'.mp3';
+						console.log(url);
+						device.queueNext(url, function(err, playing) {
+						  	successCount++;
+							//update firebase with a shouter!
+							// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
+							onceCheck(deviceDBref.id);
+							if (successCount === group.length) {
+								reply("SUCCESS").code(200);
+							}
+						});
+					} else if(data.func === 'stop') {
+						device.stop(function(){
+							successCount++;
+							//update firebase with a shouter!
+							// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
+							onceCheck(deviceDBref.id);
+							if (successCount === group.length) {
+								reply("SUCCESS").code(200);
+							}
+						});
+					} else if(data.func === 'setVolume') {
+						device.setVolume(data.data.volume, function(){
+							successCount++;
+							//update firebase with a shouter!
+							// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
+							onceCheck(deviceDBref.id);
+							if (successCount === group.length) {
+								reply("SUCCESS").code(200);
+							}
+						});
+					} else if(data.func === 'queueSpotify') {
+						device.queueSpotify(data.data.uri, function(result, error){
+							console.log(result, error);
+							successCount++;
+							//update firebase with a shouter!
+							// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
+							onceCheck(deviceDBref.id);
+							if (successCount === group.length) {
+								reply("SUCCESS").code(200);
+							}
+						})
+					}
 				}
+				
 			};
 		}
 

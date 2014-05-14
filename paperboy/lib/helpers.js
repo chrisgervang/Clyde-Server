@@ -134,8 +134,8 @@ var Shouter = function(config) {
 			var client = sonos.search();
 			client.on('DeviceAvailable', function(device, model) {
 			  device.deviceDescription(function(err, details){
-			  	//console.log("SONOS",device);
-			  	if (details.serialNum === data.settings.serialNum && !data.settings.UDN) {
+			  	//console.log("SONOS",details);
+			  	if (details.serialNum === data.settings.serialNum && data.settings.UDN === "_temp") {
 			  		console.log("SONOS",device);
 			  		data.settings.ip = device.host;
 			  		data.settings.port = device.port;
@@ -381,6 +381,13 @@ var Shouter = function(config) {
 								//Firebase: Post up the device... maybe Catcher event!
 								new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({volume: data.state.volume})
 							}
+							if (!_.isEqual(data.state.playlists,result.playlists)) {
+								// Sculley: data change
+								console.log("SONOS CHANGE: PLAYLISTS.", result.playlists);
+								data.state.playlists = result.playlists;
+								//Firebase: Post up the device... maybe Catcher event!
+								new Firebase("https://clydedev.firebaseio.com/devices/" + data.id + "/state/").update({playlists: data.state.playlists})
+							};
 							//only run shouter once!!!
 							
 							if (config.onDemand === true) {
@@ -584,8 +591,15 @@ var Shouter = function(config) {
 							if (!!result) {
 								state.playing = result;
 							};
-							//return /* online playing song queue (list) volume 	*/
-							cb(state);
+							device.getMusicLibrary('playlists', {start: '0', total: '100'},function(err, result){
+								if (!!result) {
+									//console.log(result);
+									state.playlists = result.items;
+								}	
+								//return /* online playing song queue (list) volume 	*/
+								cb(state);
+							});
+							
 						});
 				})
 			});
