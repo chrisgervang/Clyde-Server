@@ -394,7 +394,7 @@ var insteonCommand = function(gw, device, data, cb) {
 					cb(result);
 
 				});
-			} else if (setIfOnOff.data === false) {
+			} else if (setIfOnOff.data === "false") {
 				gw.turnOffFast(device.settings.devID, function(result, error) {
 					//console.log(error, result);
 	
