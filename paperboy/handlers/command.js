@@ -385,8 +385,8 @@ var insteonCommand = function(gw, device, data, cb) {
 
 			});
 		} else if (data.func === "lightSwitchState") {
-			var setIfBoolean = _.find(data.data, {label: "setIfBoolean"});
-			if (setIfBoolean.data === true) {
+			var setIfOnOff = _.find(data.data, {label: "setIfOnOff"});
+			if (setIfOnOff.data === true) {
 				gw.turnOnFast(device.settings.devID, function(result, error) {
 					//console.log(error, result);
 	
@@ -394,7 +394,7 @@ var insteonCommand = function(gw, device, data, cb) {
 					cb(result);
 
 				});
-			} else if (setIfBoolean.data === false) {
+			} else if (setIfOnOff.data === false) {
 				gw.turnOffFast(device.settings.devID, function(result, error) {
 					//console.log(error, result);
 	
