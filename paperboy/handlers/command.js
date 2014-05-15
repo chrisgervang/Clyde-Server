@@ -386,7 +386,7 @@ var insteonCommand = function(gw, device, data, cb) {
 			});
 		} else if (data.func === "lightSwitchState") {
 			var setIfOnOff = _.find(data.data, {label: "setIfOnOff"});
-			if (setIfOnOff.data === true) {
+			if (setIfOnOff.data === "true") {
 				gw.turnOnFast(device.settings.devID, function(result, error) {
 					//console.log(error, result);
 	
