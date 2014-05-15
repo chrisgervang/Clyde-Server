@@ -134,7 +134,7 @@ var Shouter = function(config) {
 			var client = sonos.search();
 			client.on('DeviceAvailable', function(device, model) {
 			  device.deviceDescription(function(err, details){
-			  	//console.log("SONOS",details);
+			  	console.log("SONOS",details);
 			  	//console.log("DATATATA",data);
 			  	if (details.serialNum === data.settings.serialNum && data.settings.UDN === "_temp") {
 			  		console.log("SONOS",device);
@@ -143,6 +143,7 @@ var Shouter = function(config) {
 			  		data.settings.online = true;
 			  		data.settings.UDN = details.UDN;
 			  		data.settings.modelName = details.modelName;
+			  		data.settings.roomName = details.roomName;
 
 			  		console.log("SHIP",that,data);
 					//Sculley: New Connection
@@ -367,7 +368,7 @@ var Shouter = function(config) {
 								new Firebase("https://clydematt.firebaseio.com/devices/" + data.id + "/state/").update({queue: data.state.queue})
 							}
 							//current playing song
-							if (!data.state.song || data.state.song.artist !== result.song.artist || data.state.song.title !== result.song.title || data.state.song.album !== result.song.album) {
+							if ((!data.state.song && !!result.song) || (!!result.song && data.state.song.title !== result.song.title)) {
 								// Sculley: data change
 								console.log("SONOS CHANGE: SONG.", result.song);
 								data.state.song = result.song;
@@ -582,8 +583,10 @@ var Shouter = function(config) {
 			state.online = true;
 			//current data
 			device.currentTrack(function(err, result){
-				console.log("SONOS TRACK\n", result);
-				state.song = result;
+				//console.log("SONOS TRACK\n", err, result);
+				if (!err && !!result) {
+					state.song = result;
+				}
 				//volume
 				device.getVolume(function(err, result){
 					state.volume = result;
