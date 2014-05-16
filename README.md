@@ -1,4 +1,4 @@
-Raspberry Pi "Paperboy" Node Server
+MakerFaire! Raspberry Pi "Paperboy" Node Server
 ===================================
 
 This will NOT be pulled back into the main backend. It's a temporary solution to bridgeing local network Smart Devices with Clyde servers.
@@ -10,4 +10,5 @@ Devices
 
 - Philips Hue
 - Insteon
-- WeMo
+- SparkCore
+- Sonos
