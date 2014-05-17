@@ -1,249 +1,344 @@
-//POST to /device to pass a command to make a device do something
-//POST to /group to pass a command to a group of devices to do something
-
-//based off devices in Firebase. SO the POST JSON looks like:
-
-/*{
-	"id":"firebaseID",
-	"action": {
-		"data":
-		"method":
-	}
-}*/
-
-//from ID, expand all device data from firebase. use this to command a "Action"
-
-var Firebase = require('firebase');
-var db = require('../lib/db');
-var helpers = require('../lib/helpers');
-
-//Init Device DB helper
-var devices = new db("devices");
-
 var sonos = require('sonos');
+var spark = require('sparknode');
+var HueApiRequire = require("node-hue-api"),
+	HueApi = HueApiRequire.HueApi,
+    LightState = HueApiRequire.lightState;
+
+var assets = "http://192.168.1.74:8000";
+
 var _ = require('lodash');
 
-var initDevices = new helpers.Mob();
-
-var onceCheck = function(id) {
-	initDevices.find(id, function(shouter, err) {
-		if(err === "404") {
-			console.log("tried and succeeded to once:", id)
-			new helpers.Shouter({id: id, onDemand: true});
-			//reply("SUCCESS").code(200);
-		} else {
-			console.log("this shouter already exists", shouter);
-			//reply("FAILED").code(200);
-		}
-	});
+var devices = {
+	sonos: {
+		ip: "10.0.1.145",
+		port: 1400,
+		assets: "http://10.0.1.10:8000/"
+	},
+	hue: {
+		username: "359bca06388d1c041eb8fa523fae0ff",
+		ip: "10.0.1.147",
+		hubId: "001788fffe105c5b"
+	},
+	spark: {
+		deviceId: "48ff6b065067555034501287",
+		accessToken: "3834a3ae871ea528e0eb03865a91df9ad76313db"
+	}
 }
+
+var states = {
+	hue: {
+		right: "off",
+		left: "off"
+	},
+	spark: {
+		led: "off",
+		water: "off",
+		curtain: "close"
+	}
+}
+
+var lightStates = {
+    off: LightState.create().off().effect('none'),
+    on: LightState.create().on().white(400, 70).effect('none'),
+    party: LightState.create().on().effect('colorloop')
+};
+
+var getConfigs = function() {
+	var client = sonos.search();
+	client.on('DeviceAvailable', function(device, model) {
+	  device.deviceDescription(function(err, details){
+	  	console.log("SONOS",details);
+	  });
+	});
+
+	//http://www.meethue.com/api/nupnp
+	HueApiRequire.locateBridges(function(err, result) {
+	    if (err) throw err;
+	    displayBridges(result);
+	});
+	var displayBridges = function(bridge) {
+	    console.log("Hue Bridges Found: " + JSON.stringify(bridge));
+	};
+	// var hue = new HueApi(devices.hue.ip, devices.hue.username);
+	// hue.createUser(devices.hue.ip, null, null, function(err, user) {
+	//     if (err) throw err;
+	//     displayUserResult(user);
+	// });
+	// var displayUserResult = function(result) {
+	//     console.log("Created user: " + JSON.stringify(result));
+	// };
+}
+
+//getConfigs();
+// var hue = new HueApi(devices.hue.ip, devices.hue.username);
+// hue.lights(function(err, lights) {
+//    if (err) throw err;
+//    displayResult(lights);
+// });
+
+
 var command = function(request, reply) {
 	var data = request.payload.command;
 	console.log("DATA", data);
-	console.time("light");
-	//Device Firebase improvement:
-	//ok so for commands I am going initailize a Souter.ask() so that we can get up to date data right away.
-	//BOOM.
-	//This also means the remote will cause chunks to fire if a chunk uses the remote controlled device as a trigger.
-	var initHubs;
-
-	
-
-	devices.load(function(elements){
-		initHubs = new Mob();
-		var Insteon = require('../lib/Insteon').Insteon;
-		
-		for (var i = 0; i < elements.length; i++) {
-			if (elements[i].designRef === "insteonHub") {
-				console.log("insteonHub");
-				//console.log("HERES WHAT WE GOT", elements[i])
-				Insteon(elements[i], function(hub){
-					initHubs.add(hub);
-					console.log("connected to insteonHub");
-					// for (var i = 0; i < elements[i].state.components.length; i++) {
-					// 	initDevices.add(new Shouter({id: device.state.components[i]}));
-					// };
-					
+	var displayResult = function(result) {
+    	console.log(JSON.stringify(result, null, 2));
+	    reply(result).code(200);
+	};	
+	if (data.device === "Window Curtains") {
+		var core = new spark.Core(devices.spark.accessToken,devices.spark.deviceId);
+		if (data.func === "curtainState") {
+			if (data.data.data === "open") {
+				core.curtain('open', function(err, data){
+					console.log(err, data);
+					states.spark.curtain = "open";
+				});
+			} else if (data.data.data === "close") {
+				core.curtain('close', function(err, data){
+					console.log(err, data);
+					states.spark.curtain = "close";
+				});
+			}
+		} else if (data.func === "curtainToggle") {
+			if (states.spark.curtain === "open") {
+				core.curtain('close', function(err, data){
+					console.log(err, data);
+					states.spark.curtain = "close";
+				});
+			} else if (states.spark.curtain === "close") {
+				core.curtain('open', function(err, data){
+					console.log(err, data);
+					states.spark.curtain = "open";
+				});
+			}
+		}
+	} else if (data.device === "Desk Fountain") {
+		var core = new spark.Core(devices.spark.accessToken,devices.spark.deviceId);
+		if (data.func === "fountainState") {
+			if (data.data.data === "on") {
+				core.fountain('on', function(err, data){
+					console.log(err, data);
+					states.spark.water = "on";
+				});
+			} else if (data.data.data === "off") {
+				core.fountain('off', function(err, data){
+					console.log(err, data);
+					states.spark.water = "off";
+				});
+			}
+		} else if (data.func === "fountainToggle") {
+			if (states.spark.water === "on") {
+				core.fountain('off', function(err, data){
+					console.log(err, data);
+					states.spark.water = "off";
+				});
+			} else if (states.spark.water === "off") {
+				core.fountain('on', function(err, data){
+					console.log(err, data);
+					states.spark.water = "on";
+				});
+			}
+		}
+	} else if (data.device === "Sonos Speaker") {
+		var device = new sonos.Sonos(devices.sonos.ip, devices.sonos.port);
+		if (data.func === "speakerTts") {
+			if (data.data.data === "PebbleSparkClyde") {
+				device.setVolume(60, function(){
+					device.queueNext(devices.sonos.assets+"pebblesparkclyde.mp3", function(err, result){
+						device.play(function(){
+							console.log(err, result);
+							reply([err,result]).code(200);
+						});
+						
+					});
+				});
+			} else if (data.data.data === "Hello") {
+				device.setVolume(60, function(){
+					device.queueNext(devices.sonos.assets+"hello.mp3", function(err, result){
+						device.play(function(){
+							console.log(err, result);
+							reply([err,result]).code(200);
+						});
+						
+					});
+				});
+			} else if (data.data.data === "Amazon") {
+				device.setVolume(60, function(){
+					device.queueNext(devices.sonos.assets+"amazon.mp3", function(err, result){
+						device.play(function(){
+							console.log(err, result);
+							reply([err,result]).code(200);
+						});
+						
+					});
+				});
+			}
+		} else if (data.func === "speakerNotification") {
+			if (data.data.data === "Email") {
+				device.setVolume(60, function(){
+					device.queueNext(devices.sonos.assets+"email.mp3", function(err, result){
+						device.play(function(){
+							console.log(err, result);
+							reply([err,result]).code(200);
+						});
+						
+					});
+				});
+			} else if (data.data.data === "Mac") {
+				device.setVolume(70, function(){
+					device.queueNext(devices.sonos.assets+"mac.mp3", function(err, result){
+						device.play(function(){
+							console.log(err, result);
+							reply([err,result]).code(200);
+						});
+						
+					});
+				});
+			} else if (data.data.data === "Txt") {
+				device.setVolume(70, function(){
+					device.queueNext(devices.sonos.assets+"txt.mp3", function(err, result){
+						device.play(function(){
+							console.log(err, result);
+							reply([err,result]).code(200);
+						});
+						
+					});
+				});
+			} else if (data.data.data === "Nyan") {
+				device.setVolume(25, function(){
+					device.queueNext(devices.sonos.assets+"nyan.mp3", function(err, result){
+						device.play(function(){
+							console.log(err, result);
+							reply([err,result]).code(200);
+						});
+						
+					});
+				});
+			}
+		}
+	} else if (data.device === "Window Lights") {
+		var core = new spark.Core(devices.spark.accessToken,devices.spark.deviceId);
+		if (data.func === "lightsState") {
+			if (data.data.data === "on") {
+				core.fade('255,255,255', function(err, data){
+					console.log(err, data);
+					states.spark.led = "on";
+				});
+			} else if (data.data.data === "off") {
+				core.fade('0,0,0', function(err, data){
+					console.log(err, data);
+					states.spark.led = "off";
+				});
+			}
+		} else if (data.func === "lightsColor") {
+			core.fade(data.data.data, function(err, data){
+				console.log(err, data);
+				states.spark.led = "on";
+			});
+		} else if (data.func === "lightToggle") {
+			if (states.spark.led === "on") {
+				core.fade('0,0,0', function(err, data){
+					console.log(err, data);
+					states.spark.led = "off";
+				});
+			} else if (states.spark.led === "off") {
+				core.fade('255,255,255', function(err, data){
+					console.log(err, data);
+					states.spark.led = "on";
 				});
 			};
-		};
-
-		var group = [];
-		console.log(elements.length, data.id.length);
-		for (var i = 0; i < elements.length; i++) {
-			for (var j = 0; j < data.id.length; j++) {
-				if (elements[i].id === data.id[j]) {
-					group.push(elements[i]);
-				}
+		} else if (data.func === "lightEffect") {
+			if (data.data.data === "party") {
+				//TODO EXTRA
 			}
 		}
-		console.log("HERES UR BATCH", group);
-		
-		if (group[0].designRef === 'insteonLightSwitch') {
-			//var Insteon = require('../../../home-controller').Insteon;
-			//var gw = new Insteon();
-			initHubs.find(group[0].settings.hubId, function(gw) {			
-				console.log("FOUND HUB", gw);
-				var successCount = 0;
-				for (var i = 0; i < group.length; i++) {
-					if (!!group[i].settings.devID) {
-						if (data.func === "shouter") {
-							var sendCommand = _.find(data.data, {label: "sendCommand"});
-							if (sendCommand.data === "once") {
-								initDevices.find(group[i].id, function(shouter, err) {
-									if(err === "404") {
-										console.log("tried and succeeded to once:", group[i].id)
-										new helpers.Shouter({id: group[i].id, onDemand: true});
-										reply("SUCCESS").code(200);
-									} else {
-										console.log("this shouter already exists", shouter);
-										reply("FAILED").code(200);
-									}
-								});
-								reply("SUCCESS").code(200);
-							} else if (sendCommand.data === "start") {
-								initDevices.find(group[i].id, function(shouter, err) {
-									if(err === "404") {
-										console.log("tried and succeeded to start:", group[i].id)
-										initDevices.add(new helpers.Shouter({id: group[i].id}));
-										reply("SUCCESS").code(200);
-									} else {
-										console.log("this shouter already exists", shouter);
-									}
-								});
-							} else if (sendCommand.data === "stop") {
-								initDevices.find(group[i].id, function(shouter, err) {
-									if(err === "404") {
-										console.log("tried and failed to stop:", group[i].id)
-										reply("FAILED").code(200);
-									}
-									console.log("found shouter", shouter);
-									initDevices.destroy(group[i].id);
-									shouter.destroy();
-									reply("SUCCESS").code(200);
-								});
-							}
-						} else {
-							var device = group[i];
-							console.log("insteonLightSwitch COMMAND", group[i].settings.devID, group[i].settings.hubId)
-							insteonCommand(gw, group[i], data, function(result) {
-								console.log("finished", result);
-								//update firebase with a shouter!
-								onceCheck(device.id);
-								//new helpers.Shouter({id: device.id, onDemand: true});
-								successCount++;
-								if (successCount === group.length) {
-									//gw.close();
-									reply("SUCCESS").code(200);
-								}
-							});
-						}
-					}
-				};
+	} else if (data.device === "Right Hue") {
+		var hue = new HueApi(devices.hue.ip, devices.hue.username);
+		if (data.func === "lightsState") {
+			if (data.data.data === "on") {
+				hue.setLightState(3, lightStates.on, function(err, lights) {
+				    if (err) throw err;
+				    displayResult(lights);
+				    states.hue.right = "on";
+				});
+			} else if (data.data.data === "off") {
+				hue.setLightState(3, lightStates.off, function(err, lights) {
+				    if (err) throw err;
+				    displayResult(lights);
+				    states.hue.right = "off";
+				});
+			}
+		} else if (data.func === "lightsColor") {
+
+		} else if (data.func === "lightToggle") {
+			if (states.hue.right === "on") {
+				hue.setLightState(3, lightStates.off, function(err, lights) {
+				    if (err) throw err;
+				    displayResult(lights);
+				    states.hue.right = "off";
+				});
+			} else if (states.hue.right = "off") {
+				hue.setLightState(3, lightStates.on, function(err, lights) {
+				    if (err) throw err;
+				    displayResult(lights);
+				    states.hue.right = "on";
+				});
+			}
+		} else if (data.func === "lightEffect") {
+			if (data.data.data === "party") {
+				hue.setLightState(3, lightStates.party, function(err, lights) {
+				    if (err) throw err;
+				    displayResult(lights);
+				    states.hue.right = "on";
+				});
+			}
+		}
+	} else if (data.device === "Left Hue") {
+		var hue = new HueApi(devices.hue.ip, devices.hue.username);
+		if (data.func === "lightsState") {
+			if (data.data.data === "on") {
+				hue.setLightState(2, lightStates.on, function(err, lights) {
+				    if (err) throw err;
+				    displayResult(lights);
+				    states.hue.left = "on";
+				});
+			} else if (data.data.data === "off") {
+				hue.setLightState(2, lightStates.off, function(err, lights) {
+				    if (err) throw err;
+				    displayResult(lights);
+				    states.hue.left = "off";
+				});
+			}
+		} else if (data.func === "lightsColor") {
+			var ar = data.data.data.split(',');
+			hue.setLightState(2, LightState.create().on().rgb(ar[0],ar[1],ar[2]).effect('none'), function(err, lights) {
+			    if (err) throw err;
+			    displayResult(lights);
+			    states.hue.left = "off";
 			});
-		} else if(group[0].designRef === 'sonosSpeaker') {
-			var successCount = 0;
-			for (var i = 0; i < group.length; i++) {
-				// var SonosDiscovery = require('sonos-discovery');
-				// var discovery = new SonosDiscovery();
-				// console.log("DISCOVERY",discovery);
-				// setTimeout(function(){
-				// 	console.log("DISCOVERY",discovery);
-				// },2000);
-				//for scope sake!
-
-
-				//ASYNC FOR GOODNESS SAKE. by the time group[i].id comes around - it's already moved onto i === poop.
-
-				//instead try putting all the commands in a function.
-				var deviceRef = _.extend(group[i]);
-
-				if (data.func === "shouter") {
-					var sendCommand = _.find(data.data, {label: "sendCommand"});
-					if (sendCommand.data === "once") {
-						initDevices.find(deviceRef.id, function(shouter, err) {
-							if(err === "404") {
-								console.log("tried and succeeded to once:", deviceRef.id)
-								new helpers.Shouter({id: deviceRef.id, onDemand: true});
-								reply("SUCCESS").code(200);
-							} else {
-								console.log("this shouter already exists", shouter);
-								reply("FAILED").code(200);
-							}
-						});
-						
-						reply("SUCCESS").code(200);
-					} else if (sendCommand.data === "start") {
-						initDevices.find(deviceRef.id, function(shouter, err) {
-							if(err === "404") {
-								console.log("tried and succeeded to start:", deviceRef.id)
-								initDevices.add(new helpers.Shouter({id: deviceRef.id}));
-								reply("SUCCESS").code(200);
-							} else {
-								console.log("this shouter already exists", shouter);
-							}
-						});
-					} else if (sendCommand.data === "stop") {
-						initDevices.find(deviceRef.id, function(shouter, err) {
-							if(err === "404") {
-								console.log("tried and failed to stop:", deviceRef.id)
-								reply("FAILED").code(200);
-							}
-							console.log("found shouter", shouter);
-							initDevices.destroy(deviceRef.id);
-							shouter.destroy();
-							reply("SUCCESS").code(200);
-						});
-					}
-					
-				} else {
-					sonosCommand(group[i], data, function (result) {
-						// body...
-						successCount++;
-						//update firebase with a shouter!
-						// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
-						
-						if (successCount === group.length) {
-							console.log(result);
-							reply("SUCCESS SONOS").code(200);
-						}	
-					});
-					
-				}
-				
-			};
-		}
-
-
-	});
-	/*if (request.params.type === "device") {
-		//grab {obj} of all devices. the firebase ID is the key. Note: this is not an array.
-		devices.root.once('value', function(snapshot){
-			var devices = snapshot.val();
-			if(!!devices[data.id]){
-				var device = devices[data.id];
-				console.log("FOUND DEVICE", devices[data.id]);
-				console.log("BIG DATA!", deviceRef);
-				//insteon
-				if (device.designRef === 'insteonLightSwitch') {
-					var Insteon = require('home-controller').Insteon;
-					var gw = new Insteon();
-					gw.connect(device.settings.hubIp, function(){
-						console.log("insteonLightSwitch COMMAND", device.settings.devID, data.data.level)
-						if (!!device.settings.devID) {
-							console.log('Connected!');
-							insteon(gw, device, data, function(result) {
-								console.log("finished", result.command.id);
-								gw.close();
-								reply(result).code(200);
-							});
-						}
-					});
-				}
+		} else if (data.func === "lightToggle") {
+			if (states.hue.left === "on") {
+				hue.setLightState(2, lightStates.off, function(err, lights) {
+				    if (err) throw err;
+				    displayResult(lights);
+				    states.hue.left = "off";
+				});
+			} else if (states.hue.left = "off") {
+				hue.setLightState(2, lightStates.on, function(err, lights) {
+				    if (err) throw err;
+				    displayResult(lights);
+				    states.hue.left = "on";
+				});
 			}
-		})
-	}*/
-
+		} else if (data.func === "lightEffect") {
+			if (data.data.data === "party") {
+				hue.setLightState(2, lightStates.party, function(err, lights) {
+				    if (err) throw err;
+				    displayResult(lights);
+				    states.hue.left = "on";
+				});
+			}
+		}
+	}
 }
 
 var sonosCommand = function (deviceRef, data, cb) {
@@ -252,7 +347,7 @@ var sonosCommand = function (deviceRef, data, cb) {
 	var deviceDBref = _.extend(deviceRef);
 
 	if(data.func === 'speakerState') {
-		var setSpeakerPlayPause = _.find(data.data, {label: "setSpeakerPlayPause"});
+		var setSpeakerPlayPause = _.find(data.data.data, {label: "setSpeakerPlayPause"});
 		if (setSpeakerPlayPause.data === 'play') {
 			console.log("HMMMMM_1", deviceDBref.id);
 			device.play(function(err, result){
@@ -276,7 +371,7 @@ var sonosCommand = function (deviceRef, data, cb) {
 			});
 		}
 	} else if(data.func === 'playPlaylist') {
-		var setSpeakerPlaylist = _.find(data.data, {label: "setSpeakerPlaylist"});
+		var setSpeakerPlaylist = _.find(data.data.data, {label: "setSpeakerPlaylist"});
 		var name = setSpeakerPlaylist.data;
 		var deviceDBref = deviceRef;
 		var uri = _.find(deviceDBref.state.playlists, {title: name}).uri;
@@ -314,7 +409,7 @@ var sonosCommand = function (deviceRef, data, cb) {
 		});
 	} else if(data.func === 'speakerTextToSpeech') {
 		//Replace all spaces with a _ because Sonos doesn't support spaces
-		var setInputText = _.find(data.data, {label: "setInputText"})
+		var setInputText = _.find(data.data.data, {label: "setInputText"})
 		var text = setInputText.data.replace(/ /g,'_');
 
 		//For supported languages see www.voicerss.org/api/documentation.aspx
@@ -341,7 +436,7 @@ var sonosCommand = function (deviceRef, data, cb) {
 			}
 		});
 	} else if(data.func === 'setVolume') {
-		device.setVolume(data.data.volume, function(){
+		device.setVolume(data.data.data.volume, function(){
 			successCount++;
 			//update firebase with a shouter!
 			// new helpers.Shouter({id: deviceDBref.id, onDemand: true})
@@ -351,7 +446,7 @@ var sonosCommand = function (deviceRef, data, cb) {
 			}
 		});
 	} else if(data.func === 'queueSpotify') {
-		device.queueSpotify(data.data.uri, function(result, error){
+		device.queueSpotify(data.data.data.uri, function(result, error){
 			console.log(result, error);
 			successCount++;
 			//update firebase with a shouter!
@@ -364,132 +459,6 @@ var sonosCommand = function (deviceRef, data, cb) {
 	}
 }
 
-//insteon
-var insteonCommand = function(gw, device, data, cb) {
-	console.time("light");
-	setTimeout(function(){
-		if (data.func === "turnOnFast") {
-			gw.turnOnFast(device.settings.devID, function(error, result) {
-				//console.log(error, result);
-
-				console.timeEnd("light");
-				cb(result);
-
-			});
-		} else if (data.func === "turnOn") {
-			gw.turnOn(device.settings.devID, data.data.level, data.data.rampRate, function(error, result) {
-				//console.log(error, result);
-
-				console.timeEnd("light");
-				cb(result);
-
-			});
-		} else if (data.func === "lightSwitchState") {
-			var setIfOnOff = _.find(data.data, {label: "setIfOnOff"});
-			if (setIfOnOff.data === "true") {
-				gw.turnOnFast(device.settings.devID, function(result, error) {
-					//console.log(error, result);
-	
-					console.timeEnd("light");
-					cb(result);
-
-				});
-			} else if (setIfOnOff.data === "false") {
-				gw.turnOffFast(device.settings.devID, function(result, error) {
-					//console.log(error, result);
-	
-					console.timeEnd("light");
-					cb(result);
-
-				});
-			}
-		} else if (data.func === "lightSwitchBrightness") {
-            var setPercent100 = _.find(data.data, {label: "setPercent100"});
-            console.log("SOME DATA TEST:", setPercent100.data);
-
-			if (setPercent100.data === 0) {
-				gw.turnOff(device.settings.devID, 1000 , function(result, error) {
-					console.timeEnd("light");
-					cb(result);
-				});
-			} else {
-                gw.turnOn(device.settings.devID, setPercent100.data, 1000, function(result, error) {
-                        //console.log(error, result);
-                        console.timeEnd("light");
-                        cb(result);
-
-                });
-			}
-        } else if (data.func === "turnOff") {
-			gw.turnOff(device.settings.devID, data.data.rampRate, function(error, result) {
-				//console.log(error, result);
-
-				console.timeEnd("light");
-				cb(result);
-
-			});
-		} else if(data.func === "turnOffFast") {
-			gw.turnOffFast(device.settings.devID, function(error, result) {
-				//console.log(error, result);
-
-				console.timeEnd("light");
-				cb(result);
-			});
-		} else if(data.func === "setLevel") {
-			if (!!data.data.level || data.data.level === 0) {
-				gw.level(device.settings.devID, data.data.level, function(error, result){
-					//console.log(error, result); // Should print 50
-	
-					console.timeEnd("light");
-					cb(result);
-				});
-			}
-		} else if(data.func === "getLevel") {
-			gw.level(device.settings.devID, function(error, result){
-				//console.log(error, result); // Should print 50
-
-				console.timeEnd("light");
-				cb(result);
-			});
-		} else if(data.func === "getDeviceInfo") {
-			gw.info(device.settings.devID, function(error, result){
-				//console.log(error, result); // Should print 50
-
-				console.timeEnd("light");
-				cb(result);
-			});
-		} else if(data.func === "linkDevice") {
-			//HALF BROKEN... throws error, kills server, after a link is made.
-			gw.link('gw', [device.settings.devID], function(error, link) {
-			  // link data from gateway
-			    //console.log(error, link);
-			
-				console.timeEnd("light");
-				cb(link);
-			});
-		} else if(data.func === "getLinks") {
-			gw.links(function(error, result){
-				//console.log(error, result);
-
-				console.timeEnd("light");
-				cb(result);
-			});
-		} else if(data.func === "unlinkDevice") {
-			//HALF BROKEN... throws error, kills server, after a link is made.
-			gw.unlink('gw', [device.settings.devID], function(error, link) {
-			  // link data from gateway
-			    console.log(error, link);
-			
-				console.timeEnd("light");
-				cb(link);
-			});
-		}
-		//BROKEN
-		// gw.turnOff(data.settings.devID, 3000, function(error, result) {
-		// 	console.log(error, result);
-		// });
-	}, 0);
-}
 var Mob = function() {
 	//add
 	//destroy

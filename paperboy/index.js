@@ -4,7 +4,7 @@ var http    = require('http'),
 var command = require('./handlers/command'),
 	devices = require('./handlers/devices');
 
-	require('./lib/helpers');
+	//require('./lib/helpers');
 
 var os=require('os');
 var ifaces=os.networkInterfaces();
@@ -25,7 +25,11 @@ var server = new Hapi.Server(ip[0], 8000, { cors: true });
 
 	server.route([
 		{ method: 'POST', path: '/command', handler: command},
-		{ method: 'GET', path: '/devices', handler: devices}
+		{ method: 'GET', path: '/devices', handler: devices},
+    { method: 'GET', path: '/{path*}', handler: {
+          directory: { path: '../public', listing: true, index: false }
+      }
+    }
 	]);
 
 	server.start();
