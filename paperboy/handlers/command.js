@@ -4,19 +4,19 @@ var HueApiRequire = require("node-hue-api"),
 	HueApi = HueApiRequire.HueApi,
     LightState = HueApiRequire.lightState;
 
-var assets = "http://192.168.1.74:8000";
+var assets = "http://192.168.1.150:8000";
 
 var _ = require('lodash');
 
 var devices = {
 	sonos: {
-		ip: "10.0.1.145",
+		ip: "192.168.1.101",
 		port: 1400,
-		assets: "http://10.0.1.10:8000/"
+		assets: "http://192.168.1.150:8000/"
 	},
 	hue: {
 		username: "359bca06388d1c041eb8fa523fae0ff",
-		ip: "10.0.1.147",
+		ip: "192.168.1.103",
 		hubId: "001788fffe105c5b"
 	},
 	spark: {
@@ -24,6 +24,9 @@ var devices = {
 		accessToken: "3834a3ae871ea528e0eb03865a91df9ad76313db"
 	}
 }
+
+var color = require('./color');
+console.log(color);
 
 var states = {
 	hue: {
@@ -69,7 +72,7 @@ var getConfigs = function() {
 	// };
 }
 
-//getConfigs();
+getConfigs();
 // var hue = new HueApi(devices.hue.ip, devices.hue.username);
 // hue.lights(function(err, lights) {
 //    if (err) throw err;
@@ -79,70 +82,77 @@ var getConfigs = function() {
 
 var command = function(request, reply) {
 	var data = request.payload.command;
-	console.log("DATA", data);
+	//console.log("DATA", data);
+	console.log(1)
 	var displayResult = function(result) {
     	console.log(JSON.stringify(result, null, 2));
 	    reply(result).code(200);
 	};	
 	if (data.device === "Window Curtains") {
 		var core = new spark.Core(devices.spark.accessToken,devices.spark.deviceId);
-		if (data.func === "curtainState") {
-			if (data.data.data === "open") {
-				core.curtain('open', function(err, data){
-					console.log(err, data);
-					states.spark.curtain = "open";
-				});
-			} else if (data.data.data === "close") {
-				core.curtain('close', function(err, data){
-					console.log(err, data);
-					states.spark.curtain = "close";
-				});
+		
+		core.on('connect', function() {
+			console.log(core);
+			if (data.func === "curtainState") {
+				if (data.data.data === "open") {
+					core.curtain("open", function(err, data){
+						console.log(err, data);
+						states.spark.curtain = "open";
+					});
+				} else if (data.data.data === "close") {
+					core.curtain('close', function(err, data){
+						console.log(err, data);
+						states.spark.curtain = "close";
+					});
+				}
+			} else if (data.func === "curtainToggle") {
+				if (states.spark.curtain === "open") {
+					core.curtain("close", function(err, data){
+						console.log(err, data);
+						states.spark.curtain = "close";
+					});
+				} else if (states.spark.curtain === "close") {
+					core.curtain("open", function(err, data){
+						console.log(err, data);
+						states.spark.curtain = "open";
+					});
+				}
 			}
-		} else if (data.func === "curtainToggle") {
-			if (states.spark.curtain === "open") {
-				core.curtain('close', function(err, data){
-					console.log(err, data);
-					states.spark.curtain = "close";
-				});
-			} else if (states.spark.curtain === "close") {
-				core.curtain('open', function(err, data){
-					console.log(err, data);
-					states.spark.curtain = "open";
-				});
-			}
-		}
+		});
 	} else if (data.device === "Desk Fountain") {
 		var core = new spark.Core(devices.spark.accessToken,devices.spark.deviceId);
-		if (data.func === "fountainState") {
-			if (data.data.data === "on") {
-				core.fountain('on', function(err, data){
-					console.log(err, data);
-					states.spark.water = "on";
-				});
-			} else if (data.data.data === "off") {
-				core.fountain('off', function(err, data){
-					console.log(err, data);
-					states.spark.water = "off";
-				});
+		core.on('connect', function() {
+			if (data.func === "fountainState") {
+				if (data.data.data === "on") {
+					core.fountain('on', function(err, data){
+						console.log(err, data);
+						states.spark.water = "on";
+					});
+				} else if (data.data.data === "off") {
+					core.fountain('off', function(err, data){
+						console.log(err, data);
+						states.spark.water = "off";
+					});
+				}
+			} else if (data.func === "fountainToggle") {
+				if (states.spark.water === "on") {
+					core.fountain('off', function(err, data){
+						console.log(err, data);
+						states.spark.water = "off";
+					});
+				} else if (states.spark.water === "off") {
+					core.fountain('on', function(err, data){
+						console.log(err, data);
+						states.spark.water = "on";
+					});
+				}
 			}
-		} else if (data.func === "fountainToggle") {
-			if (states.spark.water === "on") {
-				core.fountain('off', function(err, data){
-					console.log(err, data);
-					states.spark.water = "off";
-				});
-			} else if (states.spark.water === "off") {
-				core.fountain('on', function(err, data){
-					console.log(err, data);
-					states.spark.water = "on";
-				});
-			}
-		}
+		});
 	} else if (data.device === "Sonos Speaker") {
 		var device = new sonos.Sonos(devices.sonos.ip, devices.sonos.port);
 		if (data.func === "speakerTts") {
 			if (data.data.data === "PebbleSparkClyde") {
-				device.setVolume(60, function(){
+				device.setVolume(80, function(){
 					device.queueNext(devices.sonos.assets+"pebblesparkclyde.mp3", function(err, result){
 						device.play(function(){
 							console.log(err, result);
@@ -152,7 +162,7 @@ var command = function(request, reply) {
 					});
 				});
 			} else if (data.data.data === "Hello") {
-				device.setVolume(60, function(){
+				device.setVolume(80, function(){
 					device.queueNext(devices.sonos.assets+"hello.mp3", function(err, result){
 						device.play(function(){
 							console.log(err, result);
@@ -162,7 +172,7 @@ var command = function(request, reply) {
 					});
 				});
 			} else if (data.data.data === "Amazon") {
-				device.setVolume(60, function(){
+				device.setVolume(80, function(){
 					device.queueNext(devices.sonos.assets+"amazon.mp3", function(err, result){
 						device.play(function(){
 							console.log(err, result);
@@ -171,10 +181,8 @@ var command = function(request, reply) {
 						
 					});
 				});
-			}
-		} else if (data.func === "speakerNotification") {
-			if (data.data.data === "Email") {
-				device.setVolume(60, function(){
+			} else if (data.data.data === "Email") {
+				device.setVolume(80, function(){
 					device.queueNext(devices.sonos.assets+"email.mp3", function(err, result){
 						device.play(function(){
 							console.log(err, result);
@@ -184,7 +192,7 @@ var command = function(request, reply) {
 					});
 				});
 			} else if (data.data.data === "Mac") {
-				device.setVolume(70, function(){
+				device.setVolume(80, function(){
 					device.queueNext(devices.sonos.assets+"mac.mp3", function(err, result){
 						device.play(function(){
 							console.log(err, result);
@@ -194,7 +202,7 @@ var command = function(request, reply) {
 					});
 				});
 			} else if (data.data.data === "Txt") {
-				device.setVolume(70, function(){
+				device.setVolume(80, function(){
 					device.queueNext(devices.sonos.assets+"txt.mp3", function(err, result){
 						device.play(function(){
 							console.log(err, result);
@@ -204,7 +212,7 @@ var command = function(request, reply) {
 					});
 				});
 			} else if (data.data.data === "Nyan") {
-				device.setVolume(25, function(){
+				device.setVolume(30, function(){
 					device.queueNext(devices.sonos.assets+"nyan.mp3", function(err, result){
 						device.play(function(){
 							console.log(err, result);
@@ -214,43 +222,53 @@ var command = function(request, reply) {
 					});
 				});
 			}
+		} else if (data.func === "speakerNotification") {
+			
 		}
 	} else if (data.device === "Window Lights") {
 		var core = new spark.Core(devices.spark.accessToken,devices.spark.deviceId);
-		if (data.func === "lightsState") {
-			if (data.data.data === "on") {
-				core.fade('255,255,255', function(err, data){
+		core.on('connect', function() {
+			if (data.func === "lightsState") {
+				if (data.data.data === "on") {
+					core.fade('255,255,255', function(err, data){
+						console.log(err, data);
+						states.spark.led = "on";
+					});
+				} else if (data.data.data === "off") {
+					core.fade('0,0,0', function(err, data){
+						console.log(err, data);
+						states.spark.led = "off";
+					});
+				}
+			} else if (data.func === "lightsColor") {
+				core.fade(data.data.data, function(err, data){
 					console.log(err, data);
 					states.spark.led = "on";
 				});
-			} else if (data.data.data === "off") {
-				core.fade('0,0,0', function(err, data){
-					console.log(err, data);
-					states.spark.led = "off";
-				});
+			} else if (data.func === "lightToggle") {
+				if (states.spark.led === "on") {
+					core.fade('0,0,0', function(err, data){
+						console.log(err, data);
+						states.spark.led = "off";
+					});
+				} else if (states.spark.led === "off") {
+					// Returns a random integer between min and max
+					// Using Math.round() will give you a non-uniform distribution!
+					function getRandomInt(min, max) {
+					  return Math.floor(Math.random() * (max - min + 1)) + min;
+					}
+
+					core.fade(getRandomInt(0,255)+','+getRandomInt(0,255)+',',getRandomInt(0,255), function(err, data){
+						console.log(err, data);
+						states.spark.led = "on";
+					});
+				};
+			} else if (data.func === "lightEffect") {
+				if (data.data.data === "party") {
+					//TODO EXTRA
+				}
 			}
-		} else if (data.func === "lightsColor") {
-			core.fade(data.data.data, function(err, data){
-				console.log(err, data);
-				states.spark.led = "on";
-			});
-		} else if (data.func === "lightToggle") {
-			if (states.spark.led === "on") {
-				core.fade('0,0,0', function(err, data){
-					console.log(err, data);
-					states.spark.led = "off";
-				});
-			} else if (states.spark.led === "off") {
-				core.fade('255,255,255', function(err, data){
-					console.log(err, data);
-					states.spark.led = "on";
-				});
-			};
-		} else if (data.func === "lightEffect") {
-			if (data.data.data === "party") {
-				//TODO EXTRA
-			}
-		}
+		});
 	} else if (data.device === "Right Hue") {
 		var hue = new HueApi(devices.hue.ip, devices.hue.username);
 		if (data.func === "lightsState") {
@@ -270,6 +288,14 @@ var command = function(request, reply) {
 		} else if (data.func === "lightsColor") {
 
 		} else if (data.func === "lightToggle") {
+			// Returns a random number between min and max
+			function getRandomArbitrary(min, max) {
+			    var num = new Number(Math.random() * (max - min) + min);
+				return parseFloat(num.toPrecision(3));
+			}
+			var xyb = color.rgbToXyBri({r: getRandomArbitrary(0,1), g: getRandomArbitrary(0,1), b: getRandomArbitrary(0,1) });
+			var xybm = color.xyBriForModel(xyb, 'LCT001');
+			console.log(xyb, xybm);
 			if (states.hue.right === "on") {
 				hue.setLightState(3, lightStates.off, function(err, lights) {
 				    if (err) throw err;
@@ -277,7 +303,7 @@ var command = function(request, reply) {
 				    states.hue.right = "off";
 				});
 			} else if (states.hue.right = "off") {
-				hue.setLightState(3, lightStates.on, function(err, lights) {
+				hue.setLightState(3, LightState.create().on().xy(xybm.x, xybm.y).brightness(xybm.bri*100).effect('none'), function(err, lights) {
 				    if (err) throw err;
 				    displayResult(lights);
 				    states.hue.right = "on";
@@ -316,6 +342,14 @@ var command = function(request, reply) {
 			    states.hue.left = "off";
 			});
 		} else if (data.func === "lightToggle") {
+			// Returns a random number between min and max
+			function getRandomArbitrary(min, max) {
+			    var num = new Number(Math.random() * (max - min) + min);
+				return parseFloat(num.toPrecision(3));
+			}
+			var xyb = color.rgbToXyBri({r: getRandomArbitrary(0,1), g: getRandomArbitrary(0,1), b: getRandomArbitrary(0,1) });
+			var xybm = color.xyBriForModel(xyb, 'LCT001');
+			console.log(xyb, xybm);
 			if (states.hue.left === "on") {
 				hue.setLightState(2, lightStates.off, function(err, lights) {
 				    if (err) throw err;
@@ -323,7 +357,7 @@ var command = function(request, reply) {
 				    states.hue.left = "off";
 				});
 			} else if (states.hue.left = "off") {
-				hue.setLightState(2, lightStates.on, function(err, lights) {
+				hue.setLightState(2, LightState.create().on().xy(xybm.x, xybm.y).brightness(xybm.bri*100).effect('none'), function(err, lights) {
 				    if (err) throw err;
 				    displayResult(lights);
 				    states.hue.left = "on";

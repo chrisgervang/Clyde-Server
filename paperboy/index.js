@@ -4,6 +4,8 @@ var http    = require('http'),
 var command = require('./handlers/command'),
 	devices = require('./handlers/devices');
 
+var Firebase = require('firebase');
+var clydepebble = new Firebase('https://clydepebble.firebaseio.com/');
 	//require('./lib/helpers');
 
 var os=require('os');
@@ -21,6 +23,8 @@ for (var dev in ifaces) {
 }
 console.log(ip[0]);
 
+var date = 0;
+
 var server = new Hapi.Server(ip[0], 8000, { cors: true });
 
 	server.route([
@@ -29,7 +33,27 @@ var server = new Hapi.Server(ip[0], 8000, { cors: true });
     { method: 'GET', path: '/{path*}', handler: {
           directory: { path: '../public', listing: true, index: false }
       }
-    }
+    },
+    { method: 'GET', path: '/pebble/{button}', handler: function (request, reply) {
+
+      
+      if (request.params.button === "1") {
+        clydepebble.update({topButton: date});
+        console.log("1");
+        date += 1;
+        reply("1").code(200);
+      } else if (request.params.button === "2") {
+        clydepebble.update({middleButton: date});
+        console.log("2");
+        date += 1;
+        reply("2").code(200);
+      } else if (request.params.button === "3") {
+        clydepebble.update({bottomButton: date});
+        console.log("3");
+        date += 1;
+        reply("3").code(200);
+      }
+    }}
 	]);
 
 	server.start();
