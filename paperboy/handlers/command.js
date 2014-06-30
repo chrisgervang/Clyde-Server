@@ -4,7 +4,7 @@ var HueApiRequire = require("node-hue-api"),
 	HueApi = HueApiRequire.HueApi,
     LightState = HueApiRequire.lightState;
 
-var assets = "http://192.168.1.150:8000";
+var assets = "http://192.168.1.74:8000";
 
 var _ = require('lodash');
 
@@ -16,11 +16,11 @@ var devices = {
 	},
 	hue: {
 		username: "359bca06388d1c041eb8fa523fae0ff",
-		ip: "192.168.1.103",
+		ip: "192.168.1.135",
 		hubId: "001788fffe105c5b"
 	},
 	spark: {
-		deviceId: "48ff6b065067555034501287",
+		deviceId: "53ff6c065067544829381287",
 		accessToken: "3834a3ae871ea528e0eb03865a91df9ad76313db"
 	}
 }
@@ -72,7 +72,7 @@ var getConfigs = function() {
 	// };
 }
 
-getConfigs();
+//getConfigs();
 // var hue = new HueApi(devices.hue.ip, devices.hue.username);
 // hue.lights(function(err, lights) {
 //    if (err) throw err;
